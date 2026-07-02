@@ -1,0 +1,4077 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Quản lý Hồ sơ Khoa học v7.2</title>
+    <link rel="stylesheet" href="libs/bootstrap.min.css">
+    <script src="libs/jquery.min.js"></script>
+    <script src="libs/mammoth.browser.min.js"></script>
+    <script src="libs/jszip.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { background: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; height: 100vh; overflow: hidden; margin: 0; padding: 0; }
+        
+        .top-navbar { 
+            background: linear-gradient(135deg, #1a2a6c, #2d4373); 
+            color: #fff; 
+            padding: 8px 20px; 
+            border-bottom: 3px solid #ffc107; 
+            height: 56px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            flex-wrap: nowrap;
+            position: relative;
+            z-index: 100;
+            width: 100%;
+        }
+        .top-navbar .brand { font-size: 1.1rem; font-weight: 700; letter-spacing: 1px; }
+        .top-navbar .brand i { color: #ffc107; margin-right: 8px; }
+        .top-navbar .btn-group-sm .btn { font-size: 0.75rem; padding: 4px 10px; }
+        
+        /* Main container - full width */
+        .app-container {
+            display: flex;
+            height: calc(100vh - 56px);
+            width: 100%;
+            position: relative;
+        }
+        
+        /* Sidebar - ẩn mặc định, hiện khi hover */
+        .sidebar-wrapper {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            z-index: 50;
+            display: flex;
+            align-items: stretch;
+            transition: all 0.3s ease;
+        }
+        .sidebar-trigger {
+            width: 16px;
+            height: 100%;
+            cursor: pointer;
+            background: transparent;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 51;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sidebar-trigger:hover {
+            background: rgba(26,42,108,0.04);
+        }
+        .sidebar-trigger .trigger-line {
+            width: 3px;
+            height: 50px;
+            background: #1a2a6c;
+            border-radius: 2px;
+            opacity: 0.25;
+            transition: all 0.3s;
+        }
+        .sidebar-trigger:hover .trigger-line {
+            opacity: 0.7;
+            height: 70px;
+        }
+        
+        .sidebar-panel { 
+            background: #fff; 
+            height: 100%;
+            border-right: 1px solid #e0e0e0; 
+            padding: 10px 12px; 
+            overflow-y: auto; 
+            width: 0;
+            flex-shrink: 0;
+            transition: width 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+            overflow: hidden;
+            box-shadow: 2px 0 12px rgba(0,0,0,0.06);
+        }
+        .sidebar-wrapper:hover .sidebar-panel,
+        .sidebar-wrapper.active .sidebar-panel {
+            width: 260px;
+            opacity: 1;
+            visibility: visible;
+            overflow-y: auto;
+        }
+        .sidebar-panel::-webkit-scrollbar { width: 4px; }
+        .sidebar-panel::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        
+        .sidebar-wrapper:hover .sidebar-trigger .trigger-line {
+            opacity: 0;
+        }
+        
+        /* Main content - full width */
+        .main-content {
+            flex: 1;
+            padding: 12px 20px;
+            overflow-y: auto;
+            height: 100%;
+            background: #f0f2f5;
+            transition: padding-left 0.3s ease;
+            width: 100%;
+        }
+        .sidebar-wrapper:hover ~ .main-content,
+        .sidebar-wrapper.active ~ .main-content {
+            padding-left: 16px;
+        }
+        
+        .main-content::-webkit-scrollbar { width: 6px; }
+        .main-content::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
+        
+        .card-custom { 
+            background: #fff; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); 
+            border: none; 
+            margin-bottom: 12px; 
+        }
+        .card-custom .card-header { 
+            background: #f8f9fa; 
+            border-bottom: 2px solid #e9ecef; 
+            padding: 10px 16px; 
+            font-weight: 600; 
+            color: #1a2a6c; 
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .card-custom .card-body { padding: 16px; }
+        
+        .nav-tabs-custom {
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 16px;
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .nav-tabs-custom .nav-tab {
+            padding: 8px 20px;
+            border: none;
+            background: transparent;
+            font-weight: 600;
+            color: #6c757d;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+            border-radius: 6px 6px 0 0;
+        }
+        .nav-tabs-custom .nav-tab:hover {
+            background: #f8f9fa;
+            color: #1a2a6c;
+        }
+        .nav-tabs-custom .nav-tab.active {
+            color: #1a2a6c;
+            border-bottom-color: #1a2a6c;
+            background: #f8f9fa;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+        }
+        .info-table td {
+            padding: 10px 14px;
+            border: 1px solid #dee2e6;
+            vertical-align: middle;
+        }
+        .info-table .label-cell {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+            width: 180px;
+            white-space: nowrap;
+            font-size: 0.9rem;
+        }
+        .info-table .value-cell {
+            background: #fff;
+            font-size: 0.95rem;
+        }
+        .info-table .value-cell input {
+            font-size: 0.95rem;
+            padding: 6px 10px;
+            border: none;
+            background: transparent;
+            width: 100%;
+        }
+        .info-table .value-cell input:focus {
+            outline: none;
+            background: #f0f4ff;
+            border-radius: 4px;
+        }
+        
+        .form-section-title { 
+            font-size: 1rem; 
+            font-weight: 700; 
+            color: #1a2a6c; 
+            border-left: 4px solid #ffc107; 
+            padding-left: 12px; 
+            margin: 16px 0 10px 0; 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px;
+        }
+        .form-section-title:first-of-type { margin-top: 0; }
+        
+        .form-group { margin-bottom: 8px; }
+        .form-group label { 
+            font-size: 0.82rem; 
+            font-weight: 600; 
+            color: #495057; 
+            margin-bottom: 2px; 
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .form-control-sm { font-size: 0.92rem; padding: 6px 12px; border-radius: 6px; border: 1px solid #dde1e6; }
+        .form-control-sm:focus { border-color: #1a2a6c; box-shadow: 0 0 0 0.15rem rgba(26,42,108,0.15); }
+        
+        .table-responsive-custom { 
+            max-width: 100%; 
+            max-height: 280px; 
+            overflow: auto; 
+            margin-bottom: 6px; 
+            border: 1px solid #dee2e6; 
+            border-radius: 6px; 
+            background: #fff; 
+        }
+        .table-responsive-custom table { 
+            margin-bottom: 0; 
+            table-layout: fixed; 
+            min-width: 600px;
+            font-size: 0.9rem;
+        }
+        .table-responsive-custom th { 
+            background: #f1f3f5; 
+            font-size: 0.8rem; 
+            text-align: center; 
+            vertical-align: middle; 
+            color: #495057; 
+            border: 1px solid #dee2e6;
+            padding: 6px 8px;
+            white-space: nowrap;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .table-responsive-custom td { 
+            padding: 6px !important; 
+            vertical-align: middle; 
+            border: 1px solid #dee2e6;
+        }
+        .table-responsive-custom td input.form-control-sm { 
+            width: 100%; 
+            border: none; 
+            background: transparent; 
+            padding: 6px 10px; 
+            font-size: 0.9rem; 
+            border-radius: 0;
+        }
+        .table-responsive-custom td input.form-control-sm:focus { 
+            background: #fff; 
+            box-shadow: inset 0 0 0 2px #1a2a6c; 
+            outline: none; 
+        }
+        
+        .appendix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            min-width: 1000px;
+        }
+        .appendix-table th {
+            background: #1a2a6c;
+            color: #fff;
+            padding: 6px 8px;
+            border: 1px solid #1a2a6c;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.7rem;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+        .appendix-table th.sub-header {
+            background: #2d4373;
+            font-size: 0.65rem;
+        }
+        .appendix-table th.sub-header-2 {
+            background: #3d5a8c;
+            font-size: 0.6rem;
+        }
+        .appendix-table td {
+            padding: 4px 6px;
+            border: 1px solid #dee2e6;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 0.8rem;
+        }
+        .appendix-table td input.appendix-input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            text-align: center;
+            font-size: 0.8rem;
+            padding: 4px 6px;
+            border-radius: 0;
+            min-width: 30px;
+        }
+        .appendix-table td input.appendix-input:focus {
+            outline: none;
+            background: #f0f4ff;
+            box-shadow: inset 0 0 0 1px #1a2a6c;
+        }
+        .appendix-table td input.appendix-input:hover {
+            background: #f8f9fa;
+        }
+        .appendix-table .row-header {
+            background: #f8f9fa;
+            font-weight: 600;
+            text-align: left;
+            color: #1a2a6c;
+            font-size: 0.8rem;
+            padding-left: 8px;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .appendix-table .total-row {
+            background: #e8edf9;
+            font-weight: 700;
+        }
+        .appendix-table .name-cell {
+            text-align: left;
+            padding-left: 8px;
+        }
+        .appendix-table .col-name { 
+            min-width: 100px; 
+            max-width: 150px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 0.7rem;
+        }
+        .appendix-table .col-tt { width: 35px; }
+        .appendix-table .col-small { width: 38px; }
+        .appendix-table .col-medium { width: 45px; }
+        .appendix-table .col-ghichu { width: 50px; }
+        .appendix-table .col-chucdanh { width: 60px; }
+        
+        .dept-appendix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            min-width: 1000px;
+        }
+        .dept-appendix-table th {
+            background: #1a2a6c;
+            color: #fff;
+            padding: 6px 8px;
+            border: 1px solid #1a2a6c;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.7rem;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+        .dept-appendix-table th.sub-header {
+            background: #2d4373;
+            font-size: 0.65rem;
+        }
+        .dept-appendix-table th.sub-header-2 {
+            background: #3d5a8c;
+            font-size: 0.6rem;
+        }
+        .dept-appendix-table td {
+            padding: 4px 6px;
+            border: 1px solid #dee2e6;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 0.8rem;
+        }
+        .dept-appendix-table .row-header {
+            background: #f8f9fa;
+            font-weight: 600;
+            text-align: left;
+            color: #1a2a6c;
+            font-size: 0.8rem;
+            padding-left: 8px;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .dept-appendix-table .total-row {
+            background: #e8edf9;
+            font-weight: 700;
+        }
+        .dept-appendix-table .col-name { 
+            min-width: 100px; 
+            max-width: 150px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 0.7rem;
+        }
+        .dept-appendix-table .col-tt { width: 35px; }
+        .dept-appendix-table .col-small { width: 38px; }
+        .dept-appendix-table .col-medium { width: 45px; }
+        .dept-appendix-table .col-ghichu { width: 50px; }
+        .dept-appendix-table .col-baibao { width: 70px; }
+        .dept-appendix-table .col-chucdanh { width: 60px; }
+        
+        .col-w-xs { width: 45px; }
+        .col-w-sm { width: 90px; }
+        .col-w-md { width: 140px; }
+        .col-w-lg { width: 190px; }
+        .col-w-xl { width: 260px; }
+        .col-w-xxl { width: 330px; }
+        .col-w-action { width: 40px; }
+        
+        /* Sidebar styles */
+        .cadre-item { 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            border-left: 3px solid transparent; 
+            user-select: none; 
+            padding: 6px 10px !important;
+            border-radius: 4px !important;
+            margin-bottom: 3px;
+            background: #fff;
+            font-size: 0.85rem;
+        }
+        .cadre-item:hover { background: #f0f4ff; }
+        .cadre-item.active { 
+            background: #e8edf9; 
+            border-left-color: #1a2a6c; 
+            font-weight: 600;
+        }
+        .cadre-item .cadre-name { font-weight: 600; color: #1a2a6c; font-size: 0.85rem; }
+        .cadre-item .cadre-info { font-size: 0.7rem; color: #6c757d; }
+        
+        .dept-tag { 
+            display: inline-block; 
+            padding: 1px 8px; 
+            border-radius: 10px; 
+            font-size: 0.6rem; 
+            font-weight: 700; 
+            color: #fff;
+            letter-spacing: 0.2px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .dept-tag:hover { opacity: 0.85; transform: scale(1.02); }
+        .dept-tag.active-dept { 
+            box-shadow: 0 0 0 2px #1a2a6c, 0 0 0 4px rgba(26,42,108,0.2);
+        }
+        .dept-list { max-height: 200px; overflow-y: auto; }
+        .dept-item { 
+            padding: 4px 8px; 
+            border-bottom: 1px solid #f0f0f0; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            font-size: 0.78rem; 
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 4px;
+        }
+        .dept-item:hover { background: #f0f4ff; }
+        .dept-item.active-dept-item { 
+            background: #e8edf9;
+            border-left: 3px solid #1a2a6c;
+            padding-left: 5px;
+        }
+        .dept-item:last-child { border-bottom: none; }
+        .dept-count { font-size: 0.65rem; color: #999; }
+        .dept-actions { display: flex; gap: 2px; align-items: center; }
+        .dept-actions .btn-sm-custom { 
+            font-size: 0.55rem; 
+            padding: 1px 4px; 
+            border-radius: 3px;
+            line-height: 1.4;
+        }
+        .dept-total { 
+            font-size: 0.65rem; 
+            color: #1a2a6c; 
+            font-weight: 700;
+            padding: 2px 8px;
+            background: #e8edf9;
+            border-radius: 10px;
+        }
+        
+        .progress-container { display: none; }
+        
+        .nav-arrows { display: flex; gap: 4px; margin: 6px 0; justify-content: flex-end; }
+        .nav-arrows button { 
+            padding: 0 10px; 
+            font-size: 0.9rem; 
+            line-height: 1.6; 
+            border: 1px solid #dde1e6; 
+            background: #fff; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            transition: all 0.2s;
+        }
+        .nav-arrows button:hover { background: #e9ecef; border-color: #1a2a6c; }
+        
+        .search-box { display: flex; gap: 6px; flex-wrap: nowrap; align-items: center; }
+        .search-box select, .search-box input { 
+            font-size: 0.75rem; 
+            padding: 4px 10px; 
+            border-radius: 6px; 
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+        }
+        .search-box select option { color: #333; }
+        .search-box select:focus, .search-box input:focus { 
+            background: #fff; 
+            color: #333; 
+            border-color: #ffc107;
+            outline: none;
+        }
+        .search-box select { min-width: 150px; }
+        .search-box input { min-width: 150px; flex: 1; }
+        .search-box input::placeholder { color: rgba(255,255,255,0.6); }
+        .search-box .btn { font-size: 0.75rem; padding: 4px 14px; border-radius: 6px; }
+        
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #c1c7cd; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8afb8; }
+        
+        .btn-add-row { font-size: 0.75rem; padding: 4px 14px; margin-bottom: 4px; border-radius: 4px; }
+        .btn-sm-custom { font-size: 0.55rem; padding: 1px 4px; }
+        
+        .list-info { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #6c757d; }
+        .list-info .count { font-weight: 700; color: #1a2a6c; }
+        
+        .custom-cell-tooltip { 
+            position: absolute; 
+            background: #1a2a6c; 
+            color: #fff; 
+            padding: 4px 12px; 
+            border-radius: 4px; 
+            font-size: 0.75rem; 
+            z-index: 9999; 
+            max-width: 400px; 
+            word-wrap: break-word; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
+            display: none; 
+            pointer-events: none; 
+        }
+        
+        .badge-rank { background: #6c757d; color: #fff; font-size: 0.6rem; padding: 1px 8px; border-radius: 10px; }
+        
+        .toast-message {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #1a2a6c;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .dept-filter-label {
+            font-size: 0.7rem;
+            color: #6c757d;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            padding: 3px 0 2px 0;
+        }
+        .clear-dept-filter {
+            font-size: 0.6rem;
+            color: #dc3545;
+            cursor: pointer;
+            text-decoration: underline;
+            margin-left: 8px;
+        }
+        .clear-dept-filter:hover { color: #a71d2a; }
+        
+        .hidden-file-input { display: none; }
+        
+        .panel-mode-indicator {
+            font-size: 0.78rem;
+            color: #6c757d;
+            padding: 4px 12px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+        }
+        .panel-mode-indicator .mode-badge {
+            font-weight: 700;
+            color: #1a2a6c;
+        }
+        
+        .dept-appendix-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1a2a6c;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .dept-appendix-title .badge-dept {
+            font-size: 0.8rem;
+            padding: 3px 14px;
+            border-radius: 20px;
+            color: #fff;
+        }
+        
+        .right-panel-content {
+            height: 100%;
+            overflow-y: auto;
+            width: 100%;
+        }
+        .right-panel-content::-webkit-scrollbar { width: 5px; }
+        .right-panel-content::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        
+        .btn-back-to-dept {
+            font-size: 0.75rem;
+            padding: 3px 14px;
+            border-radius: 4px;
+            background: #e9ecef;
+            border: none;
+            color: #495057;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-back-to-dept:hover {
+            background: #dee2e6;
+            color: #1a2a6c;
+        }
+        
+        .btn-action-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .appendix-container {
+            overflow-x: auto;
+            width: 100%;
+        }
+        .appendix-container::-webkit-scrollbar { height: 8px; }
+        .appendix-container::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        
+        .btn-save-appendix {
+            font-size: 0.7rem;
+            padding: 3px 12px;
+            border-radius: 4px;
+        }
+        
+        .system-appendix-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1a2a6c;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .system-appendix-title .badge-system {
+            font-size: 0.8rem;
+            padding: 3px 14px;
+            border-radius: 20px;
+            background: #1a2a6c;
+            color: #fff;
+        }
+        
+        /* Full width card */
+        .full-width-card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .full-width-card .card-body {
+            flex: 1;
+            overflow: hidden;
+            padding: 16px;
+        }
+        
+        @media (max-width: 992px) {
+            .sidebar-wrapper:hover .sidebar-panel,
+            .sidebar-wrapper.active .sidebar-panel {
+                width: 220px;
+            }
+            .top-navbar .brand { font-size: 0.85rem; }
+            .search-box select { min-width: 90px; }
+            .search-box input { min-width: 90px; }
+        }
+        @media (max-width: 768px) {
+            .sidebar-wrapper { display: none; }
+            .main-content { padding: 8px 12px; }
+            .top-navbar { flex-wrap: wrap; height: auto; padding: 6px 12px; }
+            .top-navbar .brand { font-size: 0.8rem; }
+            .search-box { margin-top: 4px; flex-wrap: wrap; }
+            .search-box select, .search-box input { min-width: 80px; font-size: 0.7rem; }
+            .app-container { height: calc(100vh - 100px); }
+        }
+        /* Thêm vào phần CSS */
+        .sidebar-overlay {
+            position: fixed;
+            top: 56px;
+            left: 0;
+            width: 100%;
+            height: calc(100vh - 56px);
+            background: rgba(0,0,0,0.3);
+            z-index: 49;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .sidebar-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
+        /* Điều chỉnh trigger cho touch */
+        .sidebar-trigger {
+            width: 30px;
+            min-width: 30px;
+            height: 100%;
+            cursor: pointer;
+            background: transparent;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 51;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .sidebar-trigger .trigger-line {
+            width: 3px;
+            height: 50px;
+            background: #1a2a6c;
+            border-radius: 2px;
+            opacity: 0.25;
+            transition: all 0.3s;
+            pointer-events: none;
+        }
+        .sidebar-trigger .trigger-icon {
+            display: none;
+            font-size: 18px;
+            color: #1a2a6c;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        /* Trên mobile hiển thị icon */
+        @media (max-width: 768px) {
+            .sidebar-trigger {
+                width: 40px;
+                min-width: 40px;
+                background: rgba(26,42,108,0.03);
+                border-right: 1px solid rgba(26,42,108,0.05);
+            }
+            .sidebar-trigger .trigger-line {
+                display: none;
+            }
+            .sidebar-trigger .trigger-icon {
+                display: block;
+            }
+            .sidebar-trigger:active {
+                background: rgba(26,42,108,0.12);
+            }
+            .sidebar-wrapper.touch-active .sidebar-panel {
+                width: 280px;
+                opacity: 1;
+                visibility: visible;
+                overflow-y: auto;
+            }
+        }
+
+        /* State cho touch active */
+        .sidebar-wrapper.touch-active .sidebar-panel {
+            width: 280px;
+            opacity: 1;
+            visibility: visible;
+            overflow-y: auto;
+        }
+        .sidebar-wrapper.touch-active .sidebar-trigger .trigger-line {
+            opacity: 0;
+        }
+         /*Ẩn hover behavior trên touch device*/
+        .touch-device .sidebar-wrapper:hover .sidebar-panel {
+            /* Không tự động hiện khi hover trên touch */
+        }
+        .touch-device .sidebar-wrapper:hover .sidebar-trigger .trigger-line {
+            opacity: 0.25;
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="cellTooltip" class="custom-cell-tooltip"></div>
+<div id="toastMessage" class="toast-message"></div>
+
+<!-- Modal thêm Khoa -->
+<div class="modal fade" id="addDepartmentModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Thêm Khoa mới</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Tên Khoa</label>
+                    <input type="text" class="form-control form-control-sm" id="newDepartmentName" placeholder="Nhập tên Khoa...">
+                </div>
+                <div class="form-group">
+                    <label>Màu sắc</label>
+                    <input type="color" class="form-control form-control-sm" id="newDepartmentColor" value="#6c757d">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="addDepartment()">Thêm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden file inputs -->
+<input type="file" id="deptWordInput" class="hidden-file-input" accept=".doc,.docx" multiple onchange="handleDeptWordImport(this)">
+<input type="file" id="deptJsonInput" class="hidden-file-input" accept=".json" onchange="handleDeptJsonImport(this)">
+
+<!-- Top Navbar -->
+<div class="top-navbar">
+    <div class="d-flex align-items-center" style="flex-shrink:0;">
+        <span class="brand"><i class="fas fa-flask"></i>HỒ SƠ KHOA HỌC v7.2</span>
+        <div class="btn-group btn-group-sm ml-3">
+            <button class="btn btn-outline-light" onclick="document.getElementById('wordFileInput').click()">
+                <i class="fas fa-file-word"></i> Word
+            </button>
+            <input type="file" id="wordFileInput" class="hidden-file-input" multiple accept=".doc,.docx" onchange="handleWordImport(this)">
+            <button class="btn btn-outline-light" onclick="document.getElementById('jsonFileInput').click()">
+                <i class="fas fa-file-code"></i> JSON
+            </button>
+            <input type="file" id="jsonFileInput" class="hidden-file-input" accept=".json" onchange="handleJSONImport(this)">
+            <button class="btn btn-outline-warning text-dark" onclick="exportToJSONTotal()">
+                <i class="fas fa-download"></i> Xuất
+            </button>
+        </div>
+    </div>
+    <div class="search-box">
+        <select id="filterField" class="form-control-sm">
+            <option value="all">Tất cả</option>
+            <option value="fullname">Họ tên</option>
+            <option value="ccid">CCCD</option>
+            <option value="academic_degree">Học vị</option>
+            <option value="position">Chức vụ</option>
+            <option value="organization">Tổ chức</option>
+            <option value="training">Đào tạo</option>
+            <option value="work">Công tác</option>
+            <option value="publication">Công bố</option>
+            <option value="task">Nhiệm vụ</option>
+        </select>
+        <input type="text" id="filterKeyword" placeholder="Tìm kiếm..." class="form-control-sm">
+        <button class="btn btn-warning btn-sm text-dark font-weight-bold" onclick="applySearchFilter()">
+            <i class="fas fa-search"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Main App Container -->
+<div class="app-container">
+    <!-- Sidebar - ẩn mặc định, hover hiện -->
+    <div class="sidebar-wrapper" id="sidebarWrapper">
+        <div class="sidebar-trigger" id="sidebarTrigger">
+            <div class="trigger-line"></div>
+            <div class="trigger-icon">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+        <div class="sidebar-panel" id="sidebarPanel">
+            <div style="display:none;">
+                <div id="progressFill"></div>
+                <div id="fileStatus"></div>
+            </div>
+            
+            <!-- Departments -->
+            <div class="mb-2" style="background:#f8f9fa;padding:6px 10px;border-radius:6px;border:1px solid #e9ecef;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="font-weight-bold text-uppercase small text-secondary" style="font-size:0.8rem;">📚 Khoa</span>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary btn-sm-custom mr-1" onclick="resetDepartments()" title="Khôi phục"><i class="fas fa-undo"></i></button>
+                        <button class="btn btn-sm btn-outline-primary btn-sm-custom" onclick="showAddDepartmentModal()"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="dept-filter-label">
+                    Tổng số: <span id="totalCadreCount" class="dept-total">0</span> giảng viên
+                    <span class="clear-dept-filter" onclick="clearDeptFilter()" style="display:none;" id="clearFilterBtn">✕ Bỏ lọc</span>
+                </div>
+                <div class="dept-list" id="departmentList"></div>
+            </div>
+            
+            <!-- Cadre List -->
+            <div class="list-info">
+                <span>Danh sách: <span class="count" id="cadreCount">0</span> người</span>
+                <button class="btn btn-sm btn-success" onclick="addNewCadre()" style="font-size:0.7rem;padding:2px 8px;">
+                    <i class="fas fa-plus"></i> Thêm
+                </button>
+            </div>
+            <div class="nav-arrows">
+                <button id="btnUp" title="Lên"><i class="fas fa-chevron-up"></i></button>
+                <button id="btnDown" title="Xuống"><i class="fas fa-chevron-down"></i></button>
+            </div>
+            <div class="list-group" id="cadreListContainer"></div>
+        </div>
+    </div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <!-- Main Content - Full Width -->
+    <div class="main-content" id="mainContent">
+        <div class="card-custom full-width-card">
+            <div class="card-header">
+                <span id="rightPanelHeader">
+                    <i class="fas fa-table mr-2"></i>PHỤ LỤC TỔNG HỢP
+                </span>
+                <div class="btn-action-group">
+                    <span class="panel-mode-indicator" id="panelModeIndicator">
+                        <span class="mode-badge" id="modeBadge">Chọn Khoa</span>
+                    </span>
+                    <button class="btn btn-sm btn-danger" onclick="deleteCadre()" title="Xóa giảng viên" id="btnDeleteCadre" style="display:none;">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                    <button class="btn btn-sm btn-success" onclick="saveCurrentData()" title="Lưu dữ liệu" id="btnSaveCadre" style="display:none;">
+                        <i class="fas fa-save"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="refreshCurrentView()" title="Làm mới">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body" style="height:calc(100% - 60px);overflow:hidden;">
+                <div class="right-panel-content" id="rightPanelContent">
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-table fa-4x d-block mb-4 text-secondary"></i>
+                        <h5>Chọn một Khoa để xem bảng tổng hợp</h5>
+                        <p class="small">Hoặc chọn một giảng viên để xem chi tiết hồ sơ</p>
+                        <p class="small text-muted mt-3">
+                            <i class="fas fa-arrow-left mr-1"></i> Di chuột sang mép trái để hiển thị danh sách Khoa
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="libs/fontawesome.all.min.js"></script>
+<script src="libs/bootstrap.bundle.min.js"></script>
+
+<script>
+    // =========================================================================
+    // CẤU HÌNH
+    // =========================================================================
+    let cadresDatabase = [];
+    let filteredDatabase = [];
+    let currentIndex = -1;
+    let selectedDepartmentId = null;
+    let currentDeptFilter = null;
+    let currentTab = 'info';
+    let viewingCadre = false;
+    
+    let departments = [
+        { id: 1, name: "Khoa KHXH&NV", color: "#007bff" },
+        { id: 2, name: "Khoa MBĐC", color: "#28a745" },
+        { id: 3, name: "Khoa NN", color: "#dc3545" },
+        { id: 4, name: "Khoa VTĐT", color: "#fd7e14" },
+        { id: 5, name: "Khoa QSTT", color: "#6f42c1" },
+        { id: 6, name: "Khoa CHTM", color: "#20c997" },
+        { id: 7, name: "Khoa TBHK", color: "#e83e8c" },
+        { id: 8, name: "Khoa VKHK", color: "#17a2b8" },
+        { id: 9, name: "Khoa KTCS", color: "#6c757d" },
+        { id: 10, name: "Khoa CSCB", color: "#ffc107" }
+    ];
+    let nextDepartmentId = 11;
+
+    const listTableIds = [
+        "tableTraining", "tableWork", "tablePublication", "tablePatent",
+        "tableApplication", "tableTask", "tableAward", "tableAchievement"
+    ];
+
+    const sectionTableMap = {
+        9: "tableTraining",
+        10: "tableWork",
+        11: "tablePublication",
+        12: "tablePatent",
+        13: "tableApplication",
+        14: "tableTask",
+        15: "tableAward",
+        16: "tableAchievement"
+    };
+
+    let importingDeptId = null;
+
+    // =========================================================================
+    // SIDEBAR TOGGLE - Click để giữ sidebar mở
+    // =========================================================================
+    $(document).ready(function() {
+        // Click vào trigger để toggle sidebar
+        $('#sidebarTrigger').click(function(e) {
+            e.stopPropagation();
+            $('#sidebarWrapper').toggleClass('active');
+        });
+        
+        // Click ra ngoài để đóng sidebar
+        $(document).click(function(e) {
+            if (!$(e.target).closest('.sidebar-wrapper').length) {
+                $('#sidebarWrapper').removeClass('active');
+            }
+        });
+    });
+
+    // =========================================================================
+    // TAB SWITCHING
+    // =========================================================================
+    function switchTab(tabName) {
+        currentTab = tabName;
+        $('.nav-tab').removeClass('active');
+        $(`.nav-tab[data-tab="${tabName}"]`).addClass('active');
+        $('.tab-content').removeClass('active');
+        $(`#tab-${tabName}`).addClass('active');
+        
+        if (tabName === 'appendix' && currentIndex >= 0 && viewingCadre) {
+            renderCadreAppendixEditable(currentIndex);
+        }
+    }
+
+    // =========================================================================
+    // CADRE APPENDIX - Phụ lục của từng giảng viên (Có thể chỉnh sửa)
+    // =========================================================================
+    function renderCadreAppendixEditable(idx) {
+        let cadre = filteredDatabase[idx];
+        if (!cadre) {
+            document.getElementById('cadreAppendixContainer').innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-table fa-2x d-block mb-2 text-secondary"></i>
+                    <p>Chọn một giảng viên để xem phụ lục.</p>
+                </div>
+            `;
+            return;
+        }
+
+        let counts = calculateCadreCounts(cadre);
+        let rankTitle = cadre.rank || '';
+        let name = cadre.fullname || 'Chưa rõ tên';
+        let position = cadre.position || '';
+        let fullTitle = rankTitle ? `${rankTitle}, ${name}` : name;
+        if (position) fullTitle += `, ${position}`;
+
+        let html = `
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong class="text-primary" style="font-size:0.95rem;">${fullTitle}</strong>
+                <div>
+                    <button class="btn btn-sm btn-success btn-save-appendix" onclick="saveAppendixData(${idx})">
+                        <i class="fas fa-save mr-1"></i> Lưu phụ lục
+                    </button>
+                </div>
+            </div>
+            <div class="appendix-container">
+                <table class="appendix-table" id="appendixEditTable">
+                    <thead>
+                        <tr>
+                            <th rowspan="3" class="col-tt" style="background:#2d4373;">TT</th>
+                            <th rowspan="3" class="col-name"  style="background:#2d4373;vertical-align:middle;font-size:0.7rem;">Họ và Tên, cấp bậc, chức vụ</th>
+                            <th colspan="2" style="background:#2d4373;font-size:0.7rem;">Chức danh</th>
+                            <th colspan="8" style="background:#2d4373;font-size:0.7rem;">Đề tài</th>
+                            <th colspan="4" style="background:#2d4373;font-size:0.7rem;">Sáng kiến</th>
+                            <th colspan="4" style="background:#2d4373;font-size:0.7rem;">Giáo trình</th>
+                            <th colspan="4" style="background:#2d4373;font-size:0.7rem;">Tài liệu</th>
+                            <th rowspan="2" colspan="2" style="background:#2d4373;font-size:0.7rem;">Bài báo KH (Có ISSN)</th>
+                            <th rowspan="2" class="col-ghichu" style="background:#2d4373;vertical-align:middle;font-size:0.7rem;">Ghi chú</th>
+                        </tr>
+                        <tr>
+                            <th rowspan="2" class="sub-header">GVC</th>
+                            <th rowspan="2" class="sub-header">GVG CB</th>
+                            <th colspan="2" class="sub-header">NN</th>
+                            <th colspan="2" class="sub-header">BQP</th>
+                            <th colspan="2" class="sub-header">BTTM</th>
+                            <th colspan="2" class="sub-header">Trg</th>
+                            <th colspan="2" class="sub-header">BTTM</th>
+                            <th colspan="2" class="sub-header">Trg</th>
+                            <th colspan="2" class="sub-header">BTTM</th>
+                            <th colspan="2" class="sub-header">Trg</th>
+                            <th colspan="2" class="sub-header">BTTM</th>
+                            <th colspan="2" class="sub-header">Trg</th>
+                        </tr>
+                        <tr>
+                            <th class="sub-header-2" style="background:#2d4373;">CN</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CN</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CN</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CN</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CT</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CT</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CB</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CB</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CB</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CB</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TGC</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="font-size:0.8rem;">1</td>
+                            <td class="row-header name-cell" title="${fullTitle}" style="font-size:0.75rem;">${fullTitle}</td>
+                            <td><input type="text" class="appendix-input" id="chuc_danh_gvc" value="${counts.chuc_danh_gvc}"></td>
+                            <td><input type="text" class="appendix-input" id="chuc_danh_gvg_cb" value="${counts.chuc_danh_gvg_cb}"></td>
+                            <td><input type="text" class="appendix-input" id="de_tai_nn_cn" value="${counts.de_tai_nn_cn}"></td>
+                            <td><input type="text" class="appendix-input" id="de_tai_nn_tg" value="${counts.de_tai_nn_tg}"></td>
+                            <td><input type="text" class="appendix-input" id="de_tai_bqp_cn" value="${counts.de_tai_bqp_cn}"></td>
+                            <td><input type="text" class="appendix-input" id="de_tai_bqp_tg" value="${counts.de_tai_bqp_tg}"></td>
+                            <td><input type="text" class="appendix-input" id="de_tai_bttm_cn" value="${counts.de_tai_bttm_cn}"></td>
+                            <td><input type="text" class="appendix-input" id="de_tai_bttm_tg" value="${counts.de_tai_bttm_tg}"></td>
+                            <td><input type="text" class="appendix-input" id="de_tai_trg_cn" value="${counts.de_tai_trg_cn}"></td>
+                            <td><input type="text" class="appendix-input" id="de_tai_trg_tg" value="${counts.de_tai_trg_tg}"></td>
+                            <td><input type="text" class="appendix-input" id="sang_kien_bttm_cn" value="${counts.sang_kien_bttm_cn}"></td>
+                            <td><input type="text" class="appendix-input" id="sang_kien_bttm_tg" value="${counts.sang_kien_bttm_tg}"></td>
+                            <td><input type="text" class="appendix-input" id="sang_kien_trg_cn" value="${counts.sang_kien_trg_cn}"></td>
+                            <td><input type="text" class="appendix-input" id="sang_kien_trg_tg" value="${counts.sang_kien_trg_tg}"></td>
+                            <td><input type="text" class="appendix-input" id="giao_trinh_bttm_cn" value="${counts.giao_trinh_bttm_cn}"></td>
+                            <td><input type="text" class="appendix-input" id="giao_trinh_bttm_tg" value="${counts.giao_trinh_bttm_tg}"></td>
+                            <td><input type="text" class="appendix-input" id="giao_trinh_trg_cn" value="${counts.giao_trinh_trg_cn}"></td>
+                            <td><input type="text" class="appendix-input" id="giao_trinh_trg_tg" value="${counts.giao_trinh_trg_tg}"></td>
+                            <td><input type="text" class="appendix-input" id="tai_lieu_bttm_cn" value="${counts.tai_lieu_bttm_cn}"></td>
+                            <td><input type="text" class="appendix-input" id="tai_lieu_bttm_tg" value="${counts.tai_lieu_bttm_tg}"></td>
+                            <td><input type="text" class="appendix-input" id="tai_lieu_trg_cn" value="${counts.tai_lieu_trg_cn}"></td>
+                            <td><input type="text" class="appendix-input" id="tai_lieu_trg_tg" value="${counts.tai_lieu_trg_tg}"></td>
+                            <td><input type="text" class="appendix-input" id="bai_bao_tgc" value="${counts.bai_bao_tgc}"></td>
+                            <td><input type="text" class="appendix-input" id="bai_bao_tg" value="${counts.bai_bao_tg}"></td>
+                            <td><input type="text" class="appendix-input" id="ghi_chu_edit" value="" placeholder="Nhập ghi chú..." style="text-align:left;min-width:50px;"></td>
+                        </tr>
+                        <tr class="total-row" id="totalRow">
+                            <td colspan="2" style="font-size:0.8rem;font-weight:700;"><strong>TỔNG CỘNG</strong></td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_chuc_danh_gvc">${counts.chuc_danh_gvc}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_chuc_danh_gvg_cb">${counts.chuc_danh_gvg_cb}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_de_tai_nn_cn">${counts.de_tai_nn_cn}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_de_tai_nn_tg">${counts.de_tai_nn_tg}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_de_tai_bqp_cn">${counts.de_tai_bqp_cn}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_de_tai_bqp_tg">${counts.de_tai_bqp_tg}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_de_tai_bttm_cn">${counts.de_tai_bttm_cn}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_de_tai_bttm_tg">${counts.de_tai_bttm_tg}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_de_tai_trg_cn">${counts.de_tai_trg_cn}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_de_tai_trg_tg">${counts.de_tai_trg_tg}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_sang_kien_bttm_cn">${counts.sang_kien_bttm_cn}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_sang_kien_bttm_tg">${counts.sang_kien_bttm_tg}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_sang_kien_trg_cn">${counts.sang_kien_trg_cn}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_sang_kien_trg_tg">${counts.sang_kien_trg_tg}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_giao_trinh_bttm_cn">${counts.giao_trinh_bttm_cn}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_giao_trinh_bttm_tg">${counts.giao_trinh_bttm_tg}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_giao_trinh_trg_cn">${counts.giao_trinh_trg_cn}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_giao_trinh_trg_tg">${counts.giao_trinh_trg_tg}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_tai_lieu_bttm_cn">${counts.tai_lieu_bttm_cn}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_tai_lieu_bttm_tg">${counts.tai_lieu_bttm_tg}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_tai_lieu_trg_cn">${counts.tai_lieu_trg_cn}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_tai_lieu_trg_tg">${counts.tai_lieu_trg_tg}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_bai_bao_tgc">${counts.bai_bao_tgc}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_bai_bao_tg">${counts.bai_bao_tg}</td>
+                            <td style="font-size:0.8rem;font-weight:700;" id="total_ghi_chu"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-2 text-muted small">
+                <i class="fas fa-info-circle mr-1"></i>
+                <strong>Ghi chú:</strong> NN - Nhiệm vụ, BQP - Bộ Quốc phòng, BTTM - Bộ/Tổng cục/TM, Trg - Trường<br>
+                CN - Chủ nhiệm, TG - Thành viên, TGC - Tác giả chính<br>
+                GVC - Giảng viên chính, GVG CB - Giảng viên cơ bản
+            </div>
+        `;
+
+        document.getElementById('cadreAppendixContainer').innerHTML = html;
+    }
+
+    // =========================================================================
+    // SAVE APPENDIX DATA
+    // =========================================================================
+    function saveAppendixData(idx) {
+        let cadre = filteredDatabase[idx];
+        if (!cadre) {
+            showToast('Không tìm thấy giảng viên!');
+            return;
+        }
+
+        let appendixData = {
+            chuc_danh_gvc: parseInt(document.getElementById('chuc_danh_gvc')?.value) || 0,
+            chuc_danh_gvg_cb: parseInt(document.getElementById('chuc_danh_gvg_cb')?.value) || 0,
+            de_tai_nn_cn: parseInt(document.getElementById('de_tai_nn_cn')?.value) || 0,
+            de_tai_nn_tg: parseInt(document.getElementById('de_tai_nn_tg')?.value) || 0,
+            de_tai_bqp_cn: parseInt(document.getElementById('de_tai_bqp_cn')?.value) || 0,
+            de_tai_bqp_tg: parseInt(document.getElementById('de_tai_bqp_tg')?.value) || 0,
+            de_tai_bttm_cn: parseInt(document.getElementById('de_tai_bttm_cn')?.value) || 0,
+            de_tai_bttm_tg: parseInt(document.getElementById('de_tai_bttm_tg')?.value) || 0,
+            de_tai_trg_cn: parseInt(document.getElementById('de_tai_trg_cn')?.value) || 0,
+            de_tai_trg_tg: parseInt(document.getElementById('de_tai_trg_tg')?.value) || 0,
+            sang_kien_bttm_cn: parseInt(document.getElementById('sang_kien_bttm_cn')?.value) || 0,
+            sang_kien_bttm_tg: parseInt(document.getElementById('sang_kien_bttm_tg')?.value) || 0,
+            sang_kien_trg_cn: parseInt(document.getElementById('sang_kien_trg_cn')?.value) || 0,
+            sang_kien_trg_tg: parseInt(document.getElementById('sang_kien_trg_tg')?.value) || 0,
+            giao_trinh_bttm_cn: parseInt(document.getElementById('giao_trinh_bttm_cn')?.value) || 0,
+            giao_trinh_bttm_tg: parseInt(document.getElementById('giao_trinh_bttm_tg')?.value) || 0,
+            giao_trinh_trg_cn: parseInt(document.getElementById('giao_trinh_trg_cn')?.value) || 0,
+            giao_trinh_trg_tg: parseInt(document.getElementById('giao_trinh_trg_tg')?.value) || 0,
+            tai_lieu_bttm_cn: parseInt(document.getElementById('tai_lieu_bttm_cn')?.value) || 0,
+            tai_lieu_bttm_tg: parseInt(document.getElementById('tai_lieu_bttm_tg')?.value) || 0,
+            tai_lieu_trg_cn: parseInt(document.getElementById('tai_lieu_trg_cn')?.value) || 0,
+            tai_lieu_trg_tg: parseInt(document.getElementById('tai_lieu_trg_tg')?.value) || 0,
+            bai_bao_tgc: parseInt(document.getElementById('bai_bao_tgc')?.value) || 0,
+            bai_bao_tg: parseInt(document.getElementById('bai_bao_tg')?.value) || 0,
+            ghi_chu: document.getElementById('ghi_chu_edit')?.value || ''
+        };
+
+        updateTotalRow(appendixData);
+
+        if (!cadre.appendixData) {
+            cadre.appendixData = {};
+        }
+        cadre.appendixData = appendixData;
+        
+        updateCadreTablesFromAppendix(cadre, appendixData);
+
+        showToast(`Đã lưu phụ lục cho "${cadre.fullname}"`);
+        
+        if (currentDeptFilter !== null) {
+            renderDeptAppendix(currentDeptFilter);
+        } else {
+            renderSystemAppendix();
+        }
+    }
+
+    // =========================================================================
+    // UPDATE TOTAL ROW
+    // =========================================================================
+    function updateTotalRow(data) {
+        const totalIds = [
+            'total_chuc_danh_gvc', 'total_chuc_danh_gvg_cb',
+            'total_de_tai_nn_cn', 'total_de_tai_nn_tg',
+            'total_de_tai_bqp_cn', 'total_de_tai_bqp_tg',
+            'total_de_tai_bttm_cn', 'total_de_tai_bttm_tg',
+            'total_de_tai_trg_cn', 'total_de_tai_trg_tg',
+            'total_sang_kien_bttm_cn', 'total_sang_kien_bttm_tg',
+            'total_sang_kien_trg_cn', 'total_sang_kien_trg_tg',
+            'total_giao_trinh_bttm_cn', 'total_giao_trinh_bttm_tg',
+            'total_giao_trinh_trg_cn', 'total_giao_trinh_trg_tg',
+            'total_tai_lieu_bttm_cn', 'total_tai_lieu_bttm_tg',
+            'total_tai_lieu_trg_cn', 'total_tai_lieu_trg_tg',
+            'total_bai_bao_tgc', 'total_bai_bao_tg'
+        ];
+
+        const dataKeys = [
+            'chuc_danh_gvc', 'chuc_danh_gvg_cb',
+            'de_tai_nn_cn', 'de_tai_nn_tg',
+            'de_tai_bqp_cn', 'de_tai_bqp_tg',
+            'de_tai_bttm_cn', 'de_tai_bttm_tg',
+            'de_tai_trg_cn', 'de_tai_trg_tg',
+            'sang_kien_bttm_cn', 'sang_kien_bttm_tg',
+            'sang_kien_trg_cn', 'sang_kien_trg_tg',
+            'giao_trinh_bttm_cn', 'giao_trinh_bttm_tg',
+            'giao_trinh_trg_cn', 'giao_trinh_trg_tg',
+            'tai_lieu_bttm_cn', 'tai_lieu_bttm_tg',
+            'tai_lieu_trg_cn', 'tai_lieu_trg_tg',
+            'bai_bao_tgc', 'bai_bao_tg'
+        ];
+
+        for (let i = 0; i < totalIds.length; i++) {
+            let el = document.getElementById(totalIds[i]);
+            if (el) {
+                if (i < 2) {
+                    el.textContent = data[dataKeys[i]] || '';
+                } else {
+                    el.textContent = data[dataKeys[i]] || 0;
+                }
+            }
+        }
+
+        let totalGhiChu = document.getElementById('total_ghi_chu');
+        if (totalGhiChu) {
+            totalGhiChu.textContent = '';
+        }
+    }
+
+    // =========================================================================
+    // UPDATE CADRE TABLES FROM APPENDIX
+    // =========================================================================
+    function updateCadreTablesFromAppendix(cadre, data) {
+        // Lưu vào appendixData để sử dụng cho tính toán
+    }
+
+    // =========================================================================
+    // DEPARTMENT APPENDIX - Tổng hợp của toàn Khoa
+    // =========================================================================
+    function renderDeptAppendix(deptId) {
+        if (deptId === null) {
+            renderSystemAppendix();
+            return;
+        }
+
+        let dept = departments.find(d => d.id === deptId);
+        if (!dept) {
+            document.getElementById('rightPanelContent').innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <p>Không tìm thấy Khoa.</p>
+                </div>
+            `;
+            return;
+        }
+
+        let cadres = cadresDatabase.filter(c => c.department_id === deptId);
+        if (cadres.length === 0) {
+            document.getElementById('rightPanelContent').innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-table fa-3x d-block mb-3 text-secondary"></i>
+                    <p>Khoa <strong>${dept.name}</strong> chưa có giảng viên.</p>
+                </div>
+            `;
+            document.getElementById('modeBadge').textContent = dept.name;
+            document.getElementById('btnDeleteCadre').style.display = 'none';
+            document.getElementById('btnSaveCadre').style.display = 'none';
+            viewingCadre = false;
+            return;
+        }
+
+        document.getElementById('modeBadge').textContent = dept.name + ' (Tổng hợp)';
+        document.getElementById('btnDeleteCadre').style.display = 'none';
+        document.getElementById('btnSaveCadre').style.display = 'none';
+        viewingCadre = false;
+
+        let html = `
+            <div class="dept-appendix-title">
+                <span style="font-size:1rem;"><i class="fas fa-university mr-2"></i>${dept.name}</span>
+                <span class="badge-dept" style="background:${dept.color};font-size:0.8rem;padding:3px 14px;">${cadres.length} giảng viên</span>
+            </div>
+            <div class="appendix-container">
+                <table class="dept-appendix-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="3" class="col-tt" style="background:#2d4373;">TT</th>
+                            <th rowspan="3" class="col-name"  style="background:#2d4373;vertical-align:middle;font-size:0.7rem;">Họ và Tên, cấp bậc, chức vụ</th>
+                            <th colspan="2" style="background:#2d4373;font-size:0.7rem;">Chức danh</th>
+                            <th colspan="8" style="background:#2d4373;font-size:0.7rem;">Đề tài</th>
+                            <th colspan="4" style="background:#2d4373;font-size:0.7rem;">Sáng kiến</th>
+                            <th colspan="4" style="background:#2d4373;font-size:0.7rem;">Giáo trình</th>
+                            <th colspan="4" style="background:#2d4373;font-size:0.7rem;">Tài liệu</th>
+                            <th rowspan="2" colspan="2" style="background:#2d4373;font-size:0.7rem;">Bài báo KH (Có ISSN)</th>
+                            <th rowspan="2" class="col-ghichu" style="background:#2d4373;vertical-align:middle;font-size:0.7rem;">Ghi chú</th>
+                        </tr>
+                        <tr>
+                            <th rowspan="2" class="sub-header">GVC</th>
+                            <th rowspan="2" class="sub-header">GVG CB</th>
+                            <th colspan="2" class="sub-header">NN</th>
+                            <th colspan="2" class="sub-header">BQP</th>
+                            <th colspan="2" class="sub-header">BTTM</th>
+                            <th colspan="2" class="sub-header">Trg</th>
+                            <th colspan="2" class="sub-header">BTTM</th>
+                            <th colspan="2" class="sub-header">Trg</th>
+                            <th colspan="2" class="sub-header">BTTM</th>
+                            <th colspan="2" class="sub-header">Trg</th>
+                            <th colspan="2" class="sub-header">BTTM</th>
+                            <th colspan="2" class="sub-header">Trg</th>
+                        </tr>
+                        <tr>
+                            <th class="sub-header-2" style="background:#2d4373;">CN</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CN</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CN</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CN</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CT</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CT</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CB</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CB</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CB</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CB</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TGC</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        let totalCounts = {
+            chuc_danh_gvc: 0, chuc_danh_gvg_cb: 0,
+            de_tai_nn_cn: 0, de_tai_nn_tg: 0,
+            de_tai_bqp_cn: 0, de_tai_bqp_tg: 0,
+            de_tai_bttm_cn: 0, de_tai_bttm_tg: 0,
+            de_tai_trg_cn: 0, de_tai_trg_tg: 0,
+            sang_kien_bttm_cn: 0, sang_kien_bttm_tg: 0,
+            sang_kien_trg_cn: 0, sang_kien_trg_tg: 0,
+            giao_trinh_bttm_cn: 0, giao_trinh_bttm_tg: 0,
+            giao_trinh_trg_cn: 0, giao_trinh_trg_tg: 0,
+            tai_lieu_bttm_cn: 0, tai_lieu_bttm_tg: 0,
+            tai_lieu_trg_cn: 0, tai_lieu_trg_tg: 0,
+            bai_bao_tgc: 0, bai_bao_tg: 0
+        };
+
+        cadres.forEach((cadre, idx) => {
+            let counts = calculateCadreCounts(cadre);
+            if (cadre.appendixData) {
+                counts = { ...counts, ...cadre.appendixData };
+            }
+            
+            for (let key in counts) {
+                if (totalCounts.hasOwnProperty(key)) {
+                    if (key === 'chuc_danh_gvc' || key === 'chuc_danh_gvg_cb') {
+                        totalCounts[key] += parseInt(counts[key]) || 0;
+                    } else {
+                        totalCounts[key] += counts[key];
+                    }
+                }
+            }
+
+            let rankTitle = cadre.rank || '';
+            let name = cadre.fullname || 'Chưa rõ tên';
+            let position = cadre.position || '';
+            let fullTitle = rankTitle ? `${rankTitle}, ${name}` : name;
+            if (position) fullTitle += `, ${position}`;
+
+            html += `
+                <tr>
+                    <td style="font-size:0.8rem;text-align:center;">${idx + 1}</td>
+                    <td class="row-header name-cell" title="${fullTitle}" style="font-size:0.75rem;text-align:left;min-width:100px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fullTitle}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.chuc_danh_gvc}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.chuc_danh_gvg_cb}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.de_tai_nn_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.de_tai_nn_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.de_tai_bqp_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.de_tai_bqp_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.de_tai_bttm_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.de_tai_bttm_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.de_tai_trg_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.de_tai_trg_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.sang_kien_bttm_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.sang_kien_bttm_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.sang_kien_trg_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.sang_kien_trg_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.giao_trinh_bttm_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.giao_trinh_bttm_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.giao_trinh_trg_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.giao_trinh_trg_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.tai_lieu_bttm_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.tai_lieu_bttm_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.tai_lieu_trg_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.tai_lieu_trg_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.bai_bao_tgc}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${counts.bai_bao_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;"></td>
+                </tr>
+            `;
+        });
+
+        // Hàng tổng cộng
+        html += `
+            <tr class="total-row">
+                <td colspan="2" style="font-size:0.8rem;font-weight:700;text-align:center;"><strong>TỔNG CỘNG</strong></td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.chuc_danh_gvc}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.chuc_danh_gvg_cb}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.de_tai_nn_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.de_tai_nn_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.de_tai_bqp_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.de_tai_bqp_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.de_tai_bttm_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.de_tai_bttm_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.de_tai_trg_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.de_tai_trg_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.sang_kien_bttm_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.sang_kien_bttm_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.sang_kien_trg_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.sang_kien_trg_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.giao_trinh_bttm_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.giao_trinh_bttm_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.giao_trinh_trg_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.giao_trinh_trg_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.tai_lieu_bttm_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.tai_lieu_bttm_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.tai_lieu_trg_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.tai_lieu_trg_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.bai_bao_tgc}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${totalCounts.bai_bao_tg}</td>
+                <td style="font-size:0.8rem;text-align:center;"></td>
+            </tr>
+        `;
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-2 text-muted small">
+                <i class="fas fa-info-circle mr-1"></i>
+                <strong>Ghi chú:</strong> NN - Nhiệm vụ, BQP - Bộ Quốc phòng, BTTM - Bộ/Tổng cục/TM, Trg - Trường<br>
+                CN - Chủ nhiệm, TG - Thành viên, TGC - Tác giả chính<br>
+                GVC - Giảng viên chính, GVG CB - Giảng viên cơ bản
+            </div>
+        `;
+
+        document.getElementById('rightPanelContent').innerHTML = html;
+    }
+
+    // =========================================================================
+    // SYSTEM APPENDIX - Tổng hợp CÁC ĐƠN VỊ
+    // =========================================================================
+    function renderSystemAppendix() {
+        document.getElementById('modeBadge').textContent = 'Tổng hợp các đơn vị';
+        document.getElementById('btnDeleteCadre').style.display = 'none';
+        document.getElementById('btnSaveCadre').style.display = 'none';
+        viewingCadre = false;
+
+        if (departments.length === 0) {
+            document.getElementById('rightPanelContent').innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-table fa-3x d-block mb-3 text-secondary"></i>
+                    <p>Chưa có Khoa nào trong hệ thống.</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = `
+            <div class="system-appendix-title">
+                <span style="font-size:1rem;"><i class="fas fa-layer-group mr-2"></i>PHỤ LỤC TỔNG HỢP CÁC ĐƠN VỊ</span>
+                <span class="badge-system">${departments.length} Khoa</span>
+            </div>
+            <div class="appendix-container">
+                <table class="dept-appendix-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="3" class="col-tt" style="background:#2d4373;">TT</th>
+                            <th rowspan="3" class="col-name" style="background:#2d4373;vertical-align:middle;font-size:0.7rem;min-width:100px;max-width:150px;">Đơn vị</th>
+                            <th rowspan="3" style="background:#2d4373;width:50px;vertical-align:middle;font-size:0.7rem;">Quân số</th>
+                            <th colspan="2" style="background:#2d4373;font-size:0.7rem;">Chức danh</th>
+                            <th colspan="8" style="background:#2d4373;font-size:0.7rem;">Đề tài</th>
+                            <th colspan="4" style="background:#2d4373;font-size:0.7rem;">Sáng kiến</th>
+                            <th colspan="4" style="background:#2d4373;font-size:0.7rem;">Giáo trình</th>
+                            <th colspan="4" style="background:#2d4373;font-size:0.7rem;">Tài liệu</th>
+                            <th rowspan="2" colspan="2" style="background:#2d4373;font-size:0.7rem;">Bài báo KH (Có ISSN)</th>
+                            <th rowspan="2" class="col-ghichu" style="background:#2d4373;vertical-align:middle;font-size:0.7rem;">Ghi chú</th>
+                        </tr>
+                        <tr>
+                            <th rowspan="2" class="sub-header">GVC</th>
+                            <th rowspan="2" class="sub-header">GVG CB</th>
+                            <th colspan="2" class="sub-header">NN</th>
+                            <th colspan="2" class="sub-header">BQP</th>
+                            <th colspan="2" class="sub-header">BTTM</th>
+                            <th colspan="2" class="sub-header">Trg</th>
+                            <th colspan="2" class="sub-header">BTTM</th>
+                            <th colspan="2" class="sub-header">Trg</th>
+                            <th colspan="2" class="sub-header">BTTM</th>
+                            <th colspan="2" class="sub-header">Trg</th>
+                            <th colspan="2" class="sub-header">BTTM</th>
+                            <th colspan="2" class="sub-header">Trg</th>
+                        </tr>
+                        <tr>
+                            <th class="sub-header-2" style="background:#2d4373;">CN</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CN</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CN</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CN</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CT</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CT</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CB</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CB</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CB</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">CB</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TGC</th>
+                            <th class="sub-header-2" style="background:#2d4373;">TG</th>
+                            <th class="sub-header-2" style="background:#2d4373;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        let grandTotal = {
+            chuc_danh_gvc: 0, chuc_danh_gvg_cb: 0,
+            de_tai_nn_cn: 0, de_tai_nn_tg: 0,
+            de_tai_bqp_cn: 0, de_tai_bqp_tg: 0,
+            de_tai_bttm_cn: 0, de_tai_bttm_tg: 0,
+            de_tai_trg_cn: 0, de_tai_trg_tg: 0,
+            sang_kien_bttm_cn: 0, sang_kien_bttm_tg: 0,
+            sang_kien_trg_cn: 0, sang_kien_trg_tg: 0,
+            giao_trinh_bttm_cn: 0, giao_trinh_bttm_tg: 0,
+            giao_trinh_trg_cn: 0, giao_trinh_trg_tg: 0,
+            tai_lieu_bttm_cn: 0, tai_lieu_bttm_tg: 0,
+            tai_lieu_trg_cn: 0, tai_lieu_trg_tg: 0,
+            bai_bao_tgc: 0, bai_bao_tg: 0
+        };
+
+        departments.forEach((dept, idx) => {
+            let cadres = cadresDatabase.filter(c => c.department_id === dept.id);
+            let quanso = cadres.length;
+            
+            let deptTotal = {
+                chuc_danh_gvc: 0, chuc_danh_gvg_cb: 0,
+                de_tai_nn_cn: 0, de_tai_nn_tg: 0,
+                de_tai_bqp_cn: 0, de_tai_bqp_tg: 0,
+                de_tai_bttm_cn: 0, de_tai_bttm_tg: 0,
+                de_tai_trg_cn: 0, de_tai_trg_tg: 0,
+                sang_kien_bttm_cn: 0, sang_kien_bttm_tg: 0,
+                sang_kien_trg_cn: 0, sang_kien_trg_tg: 0,
+                giao_trinh_bttm_cn: 0, giao_trinh_bttm_tg: 0,
+                giao_trinh_trg_cn: 0, giao_trinh_trg_tg: 0,
+                tai_lieu_bttm_cn: 0, tai_lieu_bttm_tg: 0,
+                tai_lieu_trg_cn: 0, tai_lieu_trg_tg: 0,
+                bai_bao_tgc: 0, bai_bao_tg: 0
+            };
+
+            cadres.forEach(cadre => {
+                let counts = calculateCadreCounts(cadre);
+                if (cadre.appendixData) {
+                    counts = { ...counts, ...cadre.appendixData };
+                }
+                for (let key in deptTotal) {
+                    if (counts.hasOwnProperty(key)) {
+                        if (key === 'chuc_danh_gvc' || key === 'chuc_danh_gvg_cb') {
+                            deptTotal[key] += parseInt(counts[key]) || 0;
+                        } else {
+                            deptTotal[key] += counts[key];
+                        }
+                    }
+                }
+            });
+
+            for (let key in grandTotal) {
+                grandTotal[key] += deptTotal[key];
+            }
+
+            html += `
+                <tr>
+                    <td style="font-size:0.8rem;text-align:center;">${idx + 1}</td>
+                    <td class="row-header name-cell" title="${dept.name}" style="font-size:0.75rem;text-align:left;min-width:100px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${dept.name}</td>
+                    <td style="font-size:0.8rem;text-align:center;font-weight:700;">${quanso}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.chuc_danh_gvc}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.chuc_danh_gvg_cb}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.de_tai_nn_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.de_tai_nn_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.de_tai_bqp_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.de_tai_bqp_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.de_tai_bttm_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.de_tai_bttm_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.de_tai_trg_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.de_tai_trg_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.sang_kien_bttm_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.sang_kien_bttm_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.sang_kien_trg_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.sang_kien_trg_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.giao_trinh_bttm_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.giao_trinh_bttm_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.giao_trinh_trg_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.giao_trinh_trg_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.tai_lieu_bttm_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.tai_lieu_bttm_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.tai_lieu_trg_cn}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.tai_lieu_trg_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.bai_bao_tgc}</td>
+                    <td style="font-size:0.8rem;text-align:center;">${deptTotal.bai_bao_tg}</td>
+                    <td style="font-size:0.8rem;text-align:center;"></td>
+                </tr>
+            `;
+        });
+
+        html += `
+            <tr class="total-row">
+                <td colspan="2" style="font-size:0.8rem;font-weight:700;text-align:center;"><strong>TỔNG CỘNG</strong></td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${departments.reduce((sum, d) => sum + cadresDatabase.filter(c => c.department_id === d.id).length, 0)}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.chuc_danh_gvc}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.chuc_danh_gvg_cb}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.de_tai_nn_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.de_tai_nn_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.de_tai_bqp_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.de_tai_bqp_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.de_tai_bttm_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.de_tai_bttm_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.de_tai_trg_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.de_tai_trg_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.sang_kien_bttm_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.sang_kien_bttm_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.sang_kien_trg_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.sang_kien_trg_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.giao_trinh_bttm_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.giao_trinh_bttm_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.giao_trinh_trg_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.giao_trinh_trg_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.tai_lieu_bttm_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.tai_lieu_bttm_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.tai_lieu_trg_cn}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.tai_lieu_trg_tg}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.bai_bao_tgc}</td>
+                <td style="font-size:0.8rem;font-weight:700;text-align:center;">${grandTotal.bai_bao_tg}</td>
+                <td style="font-size:0.8rem;text-align:center;"></td>
+            </tr>
+        `;
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-2 text-muted small">
+                <i class="fas fa-info-circle mr-1"></i>
+                <strong>Ghi chú:</strong> NN - Nhà nước, BQP - Bộ Quốc phòng, BTTM - Bộ Tổng tham mưu, Trg - Trường<br>
+                CN - Chủ nhiệm, CB - Chủ biên, TG - Tham gia, TGC - Tác giả chính<br>
+                GVC - Giảng viên chính, GVG CB - Giảng viên giỏi cấp Bộ<br>
+            </div>
+        `;
+
+        document.getElementById('rightPanelContent').innerHTML = html;
+    }
+
+    // =========================================================================
+    // RENDER CADRE DETAIL (3 tabs)
+    // =========================================================================
+    function renderCadreDetail(idx) {
+        let cadre = filteredDatabase[idx];
+        if (!cadre) {
+            document.getElementById('rightPanelContent').innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <p>Không tìm thấy dữ liệu giảng viên.</p>
+                </div>
+            `;
+            return;
+        }
+
+        viewingCadre = true;
+        document.getElementById('modeBadge').textContent = cadre.fullname || 'Giảng viên';
+        document.getElementById('btnDeleteCadre').style.display = 'inline-block';
+        document.getElementById('btnSaveCadre').style.display = 'inline-block';
+
+        let rankTitle = cadre.rank || '';
+        let name = cadre.fullname || 'Chưa rõ tên';
+        let position = cadre.position || '';
+        let fullTitle = rankTitle ? `${rankTitle}, ${name}` : name;
+        if (position) fullTitle += `, ${position}`;
+
+        let html = `
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong class="text-primary" style="font-size:0.95rem;">${fullTitle}</strong>
+                <button class="btn-back-to-dept" onclick="goBackToDeptView()">
+                    <i class="fas fa-arrow-left mr-1"></i> Quay lại tổng hợp
+                </button>
+            </div>
+            
+            <!-- Tab Navigation -->
+            <div class="nav-tabs-custom">
+                <button class="nav-tab" data-tab="info" onclick="switchTab('info')">
+                    <i class="fas fa-info-circle mr-1"></i>Thông tin
+                </button>
+                <button class="nav-tab" data-tab="training" onclick="switchTab('training')">
+                    <i class="fas fa-graduation-cap mr-1"></i>Quá trình
+                </button>
+                <button class="nav-tab active" data-tab="appendix" onclick="switchTab('appendix')">
+                    <i class="fas fa-table mr-1"></i>Phụ lục
+                </button>
+            </div>
+
+            <!-- Tab 1: Thông tin -->
+            <div class="tab-content" id="tab-info">
+                <form id="cadreDetailForm">
+                    <table class="info-table">
+                        <tr>
+                            <td class="label-cell"><strong>1. Họ và tên:</strong></td>
+                            <td class="value-cell" colspan="3"><input type="text" id="fullname" value="${cadre.fullname || ''}"></td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell"><strong>2. Ngày/tháng/năm sinh:</strong></td>
+                            <td class="value-cell" ><input type="text" id="birthday" value="${cadre.birthday || ''}"></td>
+                            <td class="label-cell"><strong>Nam/Nữ:</strong></td>
+                            <td class="value-cell"><input type="text" id="gender" value="${cadre.gender || ''}"></td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell"><strong>3. Số định danh cá nhân/CCCD:</strong></td>
+                            <td class="value-cell" colspan="3"><input type="text" id="ccid" value="${cadre.ccid || ''}"></td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell"><strong>4. Học hàm:</strong></td>
+                            <td class="value-cell"><input type="text" id="academic_title" value="${cadre.academic_title || ''}"></td>
+                            <td class="label-cell"><strong>Năm được phong học hàm:</strong></td>
+                            <td class="value-cell"><input type="text" id="academic_title_year" value="${cadre.academic_title_year || ''}"></td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell"><strong>Học vị:</strong></td>
+                            <td class="value-cell"><input type="text" id="academic_degree" value="${cadre.academic_degree || ''}"></td>
+                            <td class="label-cell"><strong>Năm đạt học vị:</strong></td>
+                            <td class="value-cell"><input type="text" id="academic_degree_year" value="${cadre.academic_degree_year || ''}"></td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell"><strong>5. Chức danh nghiên cứu:</strong></td>
+                            <td class="value-cell" colspan="3"></td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell"><strong>Chức vụ:</strong></td>
+                            <td class="value-cell" colspan="3"><input type="text" id="position" value="${cadre.position || ''}"></td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell"><strong>6. Điện thoại: Tổ chức:</strong></td>
+                            <td class="value-cell"><input type="text" id="phone_org" value="${cadre.phone_org || ''}"></td>
+                            <td class="label-cell"><strong>Cá nhân:</strong></td>
+                            <td class="value-cell"><input type="text" id="phone_personal" value="${cadre.phone_personal || ''}"></td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell"><strong>7. Địa chỉ:</strong></td>
+                            <td class="value-cell" colspan="3"><input type="text" id="address" value="${cadre.address || ''}"></td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell"><strong>E-mail:</strong></td>
+                            <td class="value-cell" colspan="3"><input type="text" id="email" value="${cadre.email || ''}"></td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell" colspan="4"><strong>8. Tổ chức - Nơi làm việc của cá nhân đăng ký tham gia thực hiện nhiệm vụ:</strong></td>
+                        </tr>
+                            <td class="label-cell" style="width:200px;"><strong>Tên tổ chức:</strong></td>
+                            <td class="value-cell" colspan="3"><input type="text" id="organization" value="${cadre.organization || ''}"></td>
+                        </tr>
+                        </tr>
+                            <td class="label-cell" style="width:200px;"><strong>Tên người lãnh đạo:</strong></td>
+                            <td class="value-cell" colspan="3"><input type="text" id="leader_name" value="${cadre.leader_name || ''}"></td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell"><strong>Điện thoại người lãnh đạo:</strong></td>
+                            <td class="value-cell" colspan="3"><input type="text" id="leader_phone" value="${cadre.leader_phone || ''}"></td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell"><strong>Địa chỉ:</strong></td>
+                            <td class="value-cell" colspan="3"><input type="text" id="org_address" value="${cadre.org_address || ''}"></td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+
+            <!-- Tab 2: Quá trình -->
+            <div class="tab-content" id="tab-training">
+                <form id="cadreDetailForm2">
+                    <!-- 9. Quá trình đào tạo -->
+                    <div class="form-section-title">9. Quá trình đào tạo</div>
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-add-row" onclick="addRowToTable('tableTraining', 4)">
+                        <i class="fas fa-plus"></i> Thêm dòng
+                    </button>
+                    <div class="table-responsive-custom">
+                        <table class="table table-sm table-bordered table-striped" id="tableTraining">
+                            <thead><tr><th class="col-w-md">Bậc đào tạo</th><th class="col-w-xl">Nơi đào tạo</th><th class="col-w-xl">Chuyên môn</th><th class="col-w-sm">Năm tốt nghiệp</th><th class="col-w-action">Xóa</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <!-- 10. Quá trình công tác -->
+                    <div class="form-section-title">10. Quá trình công tác</div>
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-add-row" onclick="addRowToTable('tableWork', 4)">
+                        <i class="fas fa-plus"></i> Thêm dòng
+                    </button>
+                    <div class="table-responsive-custom">
+                        <table class="table table-sm table-bordered table-striped" id="tableWork">
+                            <thead><tr><th class="col-w-sm">Thời gian</th><th class="col-w-lg">Vị trí công tác</th><th class="col-w-xl">Tổ chức công tác</th><th class="col-w-xl">Địa chỉ tổ chức</th><th class="col-w-action">Xóa</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <!-- 11. Công trình công bố -->
+                    <div class="form-section-title">11. Các công trình công bố chủ yếu</div>
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-add-row" onclick="addRowToTable('tablePublication', 5)">
+                        <i class="fas fa-plus"></i> Thêm dòng
+                    </button>
+                    <div class="table-responsive-custom">
+                        <table class="table table-sm table-bordered table-striped" id="tablePublication">
+                            <thead><tr><th class="col-w-xs">STT</th><th class="col-w-xxl">Tên công trình</th><th class="col-w-lg">Tác giả</th><th class="col-w-xl">Nơi công bố</th><th class="col-w-sm">Năm</th><th class="col-w-action">Xóa</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <!-- 12. Văn bằng bảo hộ -->
+                    <div class="form-section-title">12. Số lượng văn bằng bảo hộ quyền sở hữu công nghiệp, thiết kế bố trí mạch tích hợp bán dẫn, giống cây trồng đã được cấp</div>
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-add-row" onclick="addRowToTable('tablePatent', 3)">
+                        <i class="fas fa-plus"></i> Thêm dòng
+                    </button>
+                    <div class="table-responsive-custom">
+                        <table class="table table-sm table-bordered table-striped" id="tablePatent">
+                            <thead><tr><th class="col-w-xs">STT</th><th class="col-w-xxl">Tên và nội dung văn bằng</th><th class="col-w-sm">Năm cấp văn bằng</th><th class="col-w-action">Xóa</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <!-- 13. Công trình áp dụng -->
+                    <div class="form-section-title">13. Số công trình được áp dụng trong thực tiễn </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-add-row" onclick="addRowToTable('tableApplication', 4)">
+                        <i class="fas fa-plus"></i> Thêm dòng
+                    </button>
+                    <div class="table-responsive-custom">
+                        <table class="table table-sm table-bordered table-striped" id="tableApplication">
+                            <thead><tr><th class="col-w-xs">STT</th><th class="col-w-xl">Tên công trình</th><th class="col-w-xxl">Hình thức, quy mô, địa chỉ áp dụng</th><th class="col-w-md">Thời gian</th><th class="col-w-action">Xóa</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <!-- 14. Nhiệm vụ KH&CN -->
+                    <div class="form-section-title">14. Các nhiệm vụ KH&CN đã chủ trì hoặc tham gia</div>
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-add-row" onclick="addRowToTable('tableTask', 5)">
+                        <i class="fas fa-plus"></i> Thêm dòng
+                    </button>
+                    <div class="table-responsive-custom">
+                        <table class="table table-sm table-bordered table-striped" id="tableTask">
+                            <thead><tr><th class="col-w-xl">Tên nhiệm vụ</th><th class="col-w-md">Thời gian</th><th class="col-w-xl">Thuộc Chương trình</th><th class="col-w-md">Tình trạng</th><th class="col-w-sm">Vai trò</th><th class="col-w-action">Xóa</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <!-- 15. Giải thưởng -->
+                    <div class="form-section-title">15. Giải thưởng trong lĩnh vực khoa học và công nghệ</div>
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-add-row" onclick="addRowToTable('tableAward', 3)">
+                        <i class="fas fa-plus"></i> Thêm dòng
+                    </button>
+                    <div class="table-responsive-custom">
+                        <table class="table table-sm table-bordered table-striped" id="tableAward">
+                            <thead><tr><th class="col-w-xs">STT</th><th class="col-w-xxl">Hình thức và nội dung giải thưởng</th><th class="col-w-sm">Năm tặng thưởng</th><th class="col-w-action">Xóa</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <!-- 16. Thành tựu khác -->
+                    <div class="form-section-title">16. Thành tựu hoạt động KH&CN và sản xuất kinh doanh khác </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-add-row" onclick="addRowToTable('tableAchievement', 3)">
+                        <i class="fas fa-plus"></i> Thêm dòng
+                    </button>
+                    <div class="table-responsive-custom">
+                        <table class="table table-sm table-bordered table-striped" id="tableAchievement">
+                            <thead><tr><th class="col-w-xs">STT</th><th class="col-w-xxl">Nội dung thành tựu</th><th class="col-w-md">Ghi chú</th><th class="col-w-action">Xóa</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tab 3: Phụ lục -->
+            <div class="tab-content active" id="tab-appendix">
+                <div id="cadreAppendixContainer">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-table fa-2x d-block mb-2 text-secondary"></i>
+                        <p>Đang tải phụ lục...</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('rightPanelContent').innerHTML = html;
+        document.getElementById('rightPanelHeader').innerHTML = `<i class="fas fa-user-edit mr-2"></i>HỒ SƠ GIẢNG VIÊN`;
+
+        loadCadreDataToForm(idx);
+        renderCadreAppendixEditable(idx);
+        currentTab = 'appendix';
+    }
+
+    // =========================================================================
+    // LOAD CADRE DATA TO FORM
+    // =========================================================================
+    function loadCadreDataToForm(idx) {
+        let cadre = filteredDatabase[idx];
+        if (!cadre) return;
+
+        for (let key in cadre) {
+            if (key !== "tables" && key !== "appendixData") {
+                let input = $("#" + key);
+                if (input.length) {
+                    input.val(cadre[key] || "");
+                }
+            }
+        }
+
+        listTableIds.forEach(tId => {
+            let tbody = $(`#${tId} tbody`).empty();
+            let rows = cadre.tables[tId] || [];
+            if (rows.length === 0) {
+                let colCount = $(`#${tId} th`).length - 1;
+                renderSingleRowToTable(tId, Array(colCount).fill(""));
+            } else {
+                rows.forEach(rData => renderSingleRowToTable(tId, rData));
+            }
+        });
+    }
+
+    // =========================================================================
+    // GO BACK TO DEPARTMENT VIEW
+    // =========================================================================
+    function goBackToDeptView() {
+        if (currentDeptFilter !== null) {
+            renderDeptAppendix(currentDeptFilter);
+            document.getElementById('rightPanelHeader').innerHTML = `<i class="fas fa-table mr-2"></i>PHỤ LỤC TỔNG HỢP`;
+            document.getElementById('modeBadge').textContent = departments.find(d => d.id === currentDeptFilter)?.name + ' (Tổng hợp)';
+            document.getElementById('btnDeleteCadre').style.display = 'none';
+            document.getElementById('btnSaveCadre').style.display = 'none';
+            viewingCadre = false;
+        } else {
+            renderSystemAppendix();
+            document.getElementById('rightPanelHeader').innerHTML = `<i class="fas fa-table mr-2"></i>PHỤ LỤC TỔNG HỢP CÁC ĐƠN VỊ`;
+            document.getElementById('modeBadge').textContent = 'Tổng hợp các đơn vị';
+            document.getElementById('btnDeleteCadre').style.display = 'none';
+            document.getElementById('btnSaveCadre').style.display = 'none';
+            viewingCadre = false;
+        }
+    }
+
+    // =========================================================================
+    // REFRESH CURRENT VIEW
+    // =========================================================================
+    function refreshCurrentView() {
+        if (viewingCadre && currentIndex >= 0) {
+            renderCadreDetail(currentIndex);
+        } else if (currentDeptFilter !== null) {
+            renderDeptAppendix(currentDeptFilter);
+        } else {
+            renderSystemAppendix();
+        }
+    }
+
+    // =========================================================================
+    // SAVE CURRENT DATA
+    // =========================================================================
+    function saveCurrentData() {
+        if (viewingCadre && currentIndex >= 0) {
+            saveFormData(false);
+        } else {
+            showToast('Đang ở chế độ xem tổng hợp. Hãy chọn một giảng viên để lưu dữ liệu.');
+        }
+    }
+
+    // =========================================================================
+    // TÍNH TOÁN SỐ LƯỢNG CHO TỪNG GIẢNG VIÊN
+    // =========================================================================
+    function calculateCadreCounts(cadre) {
+        // Nếu nhân sự đã có sẵn dữ liệu phụ lục được chuẩn hóa từ file Word, trả về luôn
+        if (cadre.appendixData) {
+            return cadre.appendixData;
+        }
+
+        // Khởi tạo tất cả giá trị mặc định bằng 0
+        let counts = {
+            chuc_danh_gvc: 0, chuc_danh_gvg_cb: 0,
+            de_tai_nn_cn: 0, de_tai_nn_tg: 0,
+            de_tai_bqp_cn: 0, de_tai_bqp_tg: 0,
+            de_tai_bttm_cn: 0, de_tai_bttm_tg: 0,
+            de_tai_trg_cn: 0, de_tai_trg_tg: 0,
+            sang_kien_bttm_cn: 0, sang_kien_bttm_tg: 0,
+            sang_kien_trg_cn: 0, sang_kien_trg_tg: 0,
+            giao_trinh_bttm_cn: 0, giao_trinh_bttm_tg: 0,
+            giao_trinh_trg_cn: 0, giao_trinh_trg_tg: 0,
+            tai_lieu_bttm_cn: 0, tai_lieu_bttm_tg: 0,
+            tai_lieu_trg_cn: 0, tai_lieu_trg_tg: 0,
+            bai_bao_tgc: 0, bai_bao_tg: 0,
+            ghi_chu: 0
+        };
+
+        // 1. Phân tích chức danh & chức vụ từ lý lịch
+        let posText = (cadre.position || "").toLowerCase().trim();
+        let resText = (cadre.research_title || "").toLowerCase().trim();
+        let combinedText = posText + " " + resText;
+
+        if (combinedText.includes('giảng viên chính') || combinedText.includes('gvc')) {
+            counts.chuc_danh_gvc = 1;
+        } else if (combinedText.includes('giảng viên') || combinedText.includes('gv') || combinedText.includes('gvg cb')) {
+            counts.chuc_danh_gvg_cb = 1;
+        }
+
+        // 2. Đếm Bài báo khoa học (Mục 11)
+        let publications = cadre.tables?.tablePublication || [];
+        publications.forEach(row => {
+            if (row.length >= 5) {
+                let place = row[3] || '';
+                let role = row[2] || '';
+                let placeLower = place.toLowerCase();
+                let hasISSN = placeLower.includes('issn') || 
+                              placeLower.includes('tạp chí') || 
+                              placeLower.includes('tap chi') ||
+                              placeLower.includes('quốc tế');
+                
+                if (hasISSN) {
+                    let isTGC = role.toLowerCase().includes('chủ trì') || 
+                               role.toLowerCase().includes('chủ nhiệm') ||
+                               role.toLowerCase().includes('tác giả chính') ||
+                               role.toLowerCase() === 'tác giả';
+                    if (isTGC) {
+                        counts.bai_bao_tgc++;
+                    } else if (role.trim() !== '') {
+                        counts.bai_bao_tg++;
+                    }
+                }
+            }
+        });
+
+        // 3. Đếm Đề tài & Nhiệm vụ (Mục 14)
+        let tasks = cadre.tables?.tableTask || [];
+        tasks.forEach(row => {
+            if (row.length >= 4) {
+                let program = row[2] || '';
+                let role = row[4] || '';
+                let programLower = program.toLowerCase();
+                let isCN = role.toLowerCase().includes('chủ trì') || 
+                          role.toLowerCase().includes('chủ nhiệm');
+                let isTG = !isCN && (role.toLowerCase().includes('tham gia') || 
+                                    role.toLowerCase().includes('thành viên') || 
+                                    role.trim() !== '');
+                
+                if (programLower.includes('nn') || programLower.includes('nhiệm vụ')) {
+                    if (isCN) counts.de_tai_nn_cn++;
+                    else if (isTG) counts.de_tai_nn_tg++;
+                } else if (programLower.includes('bqp') || programLower.includes('quốc phòng')) {
+                    if (isCN) counts.de_tai_bqp_cn++;
+                    else if (isTG) counts.de_tai_bqp_tg++;
+                } else if (programLower.includes('bttm') || programLower.includes('bộ tổng tham mưu')) {
+                    if (isCN) counts.de_tai_bttm_cn++;
+                    else if (isTG) counts.de_tai_bttm_tg++;
+                } else {
+                    if (isCN) counts.de_tai_trg_cn++;
+                    else if (isTG) counts.de_tai_trg_tg++;
+                }
+            }
+        });
+
+        // 4. Đếm Giáo trình, Sáng kiến, Tài liệu (Mục 13)
+        let apps = cadre.tables?.tableApplication || [];
+        apps.forEach(row => {
+            if (row.length >= 3) {
+                let name = row[1] || '';
+                let form = row[2] || '';
+                let role = row[3] || '';
+                let formLower = form.toLowerCase();
+                let nameLower = name.toLowerCase();
+                let isCN = role.toLowerCase().includes('chủ trì') || 
+                          role.toLowerCase().includes('chủ nhiệm') || 
+                          role.toLowerCase().includes('chủ biên');
+                let isTG = !isCN && (role.toLowerCase().includes('tham gia') || 
+                                    role.toLowerCase().includes('thành viên') || 
+                                    role.trim() !== '');
+                
+                if (formLower.includes('sáng kiến') || nameLower.includes('sáng kiến')) {
+                    if (isCN) counts.sang_kien_bttm_cn++;
+                    else if (isTG) counts.sang_kien_bttm_tg++;
+                } else if (formLower.includes('giáo trình') || nameLower.includes('giáo trình')) {
+                    if (isCN) counts.giao_trinh_bttm_cn++;
+                    else if (isTG) counts.giao_trinh_bttm_tg++;
+                } else if (formLower.includes('tài liệu') || nameLower.includes('tài liệu')) {
+                    if (isCN) counts.tai_lieu_bttm_cn++;
+                    else if (isTG) counts.tai_lieu_bttm_tg++;
+                }
+            }
+        });
+
+        // 5. Đếm bổ sung từ bảng Thành tựu (Mục 16)
+        let achievements = cadre.tables?.tableAchievement || [];
+        achievements.forEach(row => {
+            if (row.length >= 2) {
+                let content = row[1] || '';
+                let role = row[2] || '';
+                let contentLower = content.toLowerCase();
+                let isCN = role.toLowerCase().includes('chủ trì') || 
+                          role.toLowerCase().includes('chủ nhiệm') ||
+                          role.toLowerCase().includes('chủ biên');
+                let isTG = !isCN && (role.toLowerCase().includes('tham gia') || 
+                                    role.toLowerCase().includes('thành viên') || 
+                                    role.trim() !== '');
+                
+                if (contentLower.includes('sáng kiến')) {
+                    if (isCN) counts.sang_kien_trg_cn++;
+                    else if (isTG) counts.sang_kien_trg_tg++;
+                } else if (contentLower.includes('giáo trình')) {
+                    if (isCN) counts.giao_trinh_trg_cn++;
+                    else if (isTG) counts.giao_trinh_trg_tg++;
+                } else if (contentLower.includes('tài liệu')) {
+                    if (isCN) counts.tai_lieu_trg_cn++;
+                    else if (isTG) counts.tai_lieu_trg_tg++;
+                }
+            }
+        });
+
+        // Tính tổng số công trình để điền vào cột ghi chú
+        let total = 0;
+        for (let key in counts) {
+            if (key !== 'ghi_chu' && key !== 'chuc_danh_gvc' && key !== 'chuc_danh_gvg_cb') {
+                total += counts[key];
+            }
+        }
+        counts.ghi_chu = total;
+
+        return counts;
+    }
+
+    // =========================================================================
+    // TOAST / PROGRESS
+    // =========================================================================
+    function showToast(message) {
+        let toast = document.getElementById('toastMessage');
+        if (!toast) return;
+        toast.textContent = message;
+        toast.style.display = 'block';
+        clearTimeout(toast._timeout);
+        toast._timeout = setTimeout(function() {
+            toast.style.display = 'none';
+        }, 3000);
+    }
+
+    function updateProgress(value) {
+        let fill = document.getElementById('progressFill');
+        let status = document.getElementById('fileStatus');
+        if (fill) fill.style.width = value + '%';
+        if (status) status.textContent = value > 0 ? `Đang xử lý... ${Math.round(value)}%` : 'Sẵn sàng';
+    }
+
+    // =========================================================================
+    // KHỞI TẠO
+    // =========================================================================
+    $(document).ready(function() {
+        loadDepartmentsFromLocal();
+        loadDemoData();
+        renderDepartments();
+        applySearchFilter();
+        
+        if (currentDeptFilter === null) {
+            renderSystemAppendix();
+            document.getElementById('rightPanelHeader').innerHTML = `<i class="fas fa-table mr-2"></i>PHỤ LỤC TỔNG HỢP CÁC ĐƠN VỊ`;
+            document.getElementById('modeBadge').textContent = 'Tổng hợp các đơn vị';
+        }
+        
+        $("#filterKeyword").on("keypress", function(e) { if (e.which === 13) applySearchFilter(); });
+        
+        const tooltip = $("#cellTooltip");
+        $(document).on("mouseenter", "input[type='text']", function() {
+            const val = $(this).val().trim();
+            if (!val) return;
+            if (this.scrollWidth > this.clientWidth) {
+                tooltip.text(val).show();
+            }
+        }).on("mousemove", "input[type='text']", function(e) {
+            if (tooltip.is(":visible")) {
+                let left = e.pageX + 15, top = e.pageY + 15;
+                const tw = tooltip.outerWidth(), th = tooltip.outerHeight();
+                const ww = $(window).width(), wh = $(window).height();
+                if (left + tw > ww) left = e.pageX - tw - 15;
+                if (top + th > wh) top = e.pageY - th - 15;
+                tooltip.css({ top: top + "px", left: left + "px" });
+            }
+        }).on("mouseleave", "input[type='text']", function() {
+            tooltip.hide().text("");
+        });
+
+        $("#btnUp").click(function() {
+            if (filteredDatabase.length === 0 || currentIndex <= 0) return;
+            setActiveIndex(currentIndex - 1);
+            scrollToItem(currentIndex);
+        });
+        $("#btnDown").click(function() {
+            if (filteredDatabase.length === 0 || currentIndex >= filteredDatabase.length - 1) return;
+            setActiveIndex(currentIndex + 1);
+            scrollToItem(currentIndex);
+        });
+    });
+
+    // =========================================================================
+    // CÁC HÀM CÒN LẠI
+    // =========================================================================
+    function scrollToItem(idx) {
+        let container = $("#cadreListContainer");
+        let item = container.find(".cadre-item[data-idx='" + idx + "']");
+        if (item.length) {
+            let containerHeight = container.height();
+            let itemTop = item.position().top;
+            let scrollTop = container.scrollTop();
+            if (itemTop < 0 || itemTop > containerHeight - item.outerHeight()) {
+                container.scrollTop(scrollTop + itemTop - containerHeight/2 + item.outerHeight()/2);
+            }
+        }
+    }
+
+    function setActiveIndex(idx) {
+        if (idx < 0 || idx >= filteredDatabase.length) return;
+        currentIndex = idx;
+        $(".cadre-item").removeClass("active");
+        $(".cadre-item[data-idx='" + idx + "']").addClass("active");
+        
+        renderCadreDetail(idx);
+        document.getElementById('rightPanelHeader').innerHTML = `<i class="fas fa-user-edit mr-2"></i>HỒ SƠ GIẢNG VIÊN`;
+        document.getElementById('modeBadge').textContent = filteredDatabase[idx]?.fullname || 'Giảng viên';
+        document.getElementById('btnDeleteCadre').style.display = 'inline-block';
+        document.getElementById('btnSaveCadre').style.display = 'inline-block';
+        
+        let cadre = filteredDatabase[idx];
+        if (cadre) {
+            let filterText = currentDeptFilter !== null ? 
+                ` (${departments.find(d => d.id === currentDeptFilter)?.name || 'Khoa'})` : '';
+            $("#currentCadreHeader").html(`<i class="fas fa-user-edit mr-2"></i> ${cadre.fullname || "Chưa có tên"} (${idx + 1}/${filteredDatabase.length})${filterText}`);
+        }
+    }
+
+    // =========================================================================
+    // DEPARTMENT FUNCTIONS
+    // =========================================================================
+    function renderDepartments() {
+        let html = "";
+        let totalCadres = cadresDatabase.length;
+        document.getElementById('totalCadreCount').textContent = totalCadres;
+        
+        let clearBtn = document.getElementById('clearFilterBtn');
+        if (currentDeptFilter !== null) {
+            clearBtn.style.display = 'inline';
+        } else {
+            clearBtn.style.display = 'none';
+        }
+        
+        departments.forEach(dept => {
+            let count = cadresDatabase.filter(c => c.department_id === dept.id).length;
+            let color = dept.color || "#6c757d";
+            let isActive = (currentDeptFilter === dept.id);
+            let activeClass = isActive ? 'active-dept-item' : '';
+            let tagActiveClass = isActive ? 'active-dept' : '';
+            
+            html += `
+                <div class="dept-item ${activeClass}" onclick="filterByDept(${dept.id})">
+                    <span>
+                        <span class="dept-tag ${tagActiveClass}" style="background:${color}">${dept.name}</span>
+                        <span class="dept-count">(${count})</span>
+                    </span>
+                    <div class="dept-actions">
+                        <button class="btn btn-sm btn-outline-primary btn-sm-custom" onclick="event.stopPropagation();importToDept(${dept.id})" title="Nhập dữ liệu vào Khoa này">
+                            <i class="fas fa-file-import"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-success btn-sm-custom" onclick="event.stopPropagation();addCadreToDept(${dept.id})" title="Thêm giảng viên vào Khoa này">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger btn-sm-custom" onclick="event.stopPropagation();deleteDepartment(${dept.id})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        if (departments.length === 0) {
+            html = `<div class="text-muted text-center small py-1">Chưa có Khoa</div>`;
+        }
+        $("#departmentList").html(html);
+    }
+
+    function filterByDept(deptId) {
+        if (currentDeptFilter === deptId) {
+            clearDeptFilter();
+        } else {
+            currentDeptFilter = deptId;
+            renderDepartments();
+            applySearchFilter();
+            renderDeptAppendix(deptId);
+            document.getElementById('rightPanelHeader').innerHTML = `<i class="fas fa-table mr-2"></i>PHỤ LỤC TỔNG HỢP`;
+            document.getElementById('modeBadge').textContent = departments.find(d => d.id === deptId)?.name + ' (Tổng hợp)';
+            document.getElementById('btnDeleteCadre').style.display = 'none';
+            document.getElementById('btnSaveCadre').style.display = 'none';
+            viewingCadre = false;
+            showToast(`Đang hiển thị giảng viên của ${departments.find(d => d.id === deptId)?.name || 'Khoa'}`);
+        }
+    }
+
+    function clearDeptFilter() {
+        currentDeptFilter = null;
+        renderDepartments();
+        applySearchFilter();
+        showToast('Đã bỏ lọc theo Khoa');
+        renderSystemAppendix();
+        document.getElementById('rightPanelHeader').innerHTML = `<i class="fas fa-table mr-2"></i>PHỤ LỤC TỔNG HỢP CÁC ĐƠN VỊ`;
+        document.getElementById('modeBadge').textContent = 'Tổng hợp các đơn vị';
+        document.getElementById('btnDeleteCadre').style.display = 'none';
+        document.getElementById('btnSaveCadre').style.display = 'none';
+        viewingCadre = false;
+    }
+
+    function importToDept(deptId) {
+        importingDeptId = deptId;
+        let confirmMsg = `Chọn cách nhập dữ liệu cho Khoa "${departments.find(d => d.id === deptId)?.name}":\n\n` +
+                        `1. Nhập từ file Word (chọn OK)\n` +
+                        `2. Nhập từ file JSON (chọn Cancel)`;
+        if (confirm(confirmMsg)) {
+            document.getElementById('deptWordInput').click();
+        } else {
+            document.getElementById('deptJsonInput').click();
+        }
+    }
+
+    function addCadreToDept(deptId) {
+        selectedDepartmentId = deptId;
+        addNewCadre();
+    }
+
+    // =========================================================================
+    // DEPARTMENT IMPORT HANDLERS
+    // =========================================================================
+    function handleDeptWordImport(input) {
+        if (input.files.length === 0) return;
+        let deptId = importingDeptId;
+        if (!deptId) {
+            alert("Không xác định được Khoa!");
+            input.value = '';
+            return;
+        }
+        
+        let validFiles = Array.from(input.files).filter(f => {
+            let ext = f.name.split('.').pop().toLowerCase();
+            return ext === 'docx' || ext === 'doc';
+        });
+        
+        if (validFiles.length === 0) {
+            alert("Vui lòng chọn file .doc hoặc .docx!");
+            input.value = '';
+            return;
+        }
+        
+        updateProgress(0);
+        let done = 0;
+        let allCadres = [];
+
+        validFiles.forEach((file) => {
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                let arrayBuffer = e.target.result;
+                let ext = file.name.split('.').pop().toLowerCase();
+                
+                if (ext === 'docx') {
+                    try {
+                        let zip = new JSZip(arrayBuffer);
+                        let docFile = zip.file("word/document.xml");
+                        if (docFile) {
+                            let xml = docFile.asText();
+                            let tables = parseDocxTables(xml);
+                            
+                            mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+                            .then(function(result) {
+                                let rawText = result.value || "";
+                                processDocxWithTablesAdvanced(rawText, file.name, tables, allCadres, function() {
+                                    done++;
+                                    updateProgress((done / validFiles.length) * 100);
+                                    if (done === validFiles.length) finishDeptImport(allCadres, deptId);
+                                });
+                            }).catch(function(err) {
+                                console.error("Mammoth error:", err);
+                                let text = readDocxTextFromZip(arrayBuffer);
+                                processTextAdvanced(text, file.name, allCadres, function() {
+                                    done++;
+                                    updateProgress((done / validFiles.length) * 100);
+                                    if (done === validFiles.length) finishDeptImport(allCadres, deptId);
+                                });
+                            });
+                        } else {
+                            done++;
+                            if (done === validFiles.length) finishDeptImport(allCadres, deptId);
+                        }
+                    } catch(e) {
+                        console.error("Parse docx error:", e);
+                        mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+                        .then(function(result) {
+                            let rawText = result.value || "";
+                            processTextAdvanced(rawText, file.name, allCadres, function() {
+                                done++;
+                                updateProgress((done / validFiles.length) * 100);
+                                if (done === validFiles.length) finishDeptImport(allCadres, deptId);
+                            });
+                        }).catch(function(err) {
+                            done++;
+                            if (done === validFiles.length) finishDeptImport(allCadres, deptId);
+                        });
+                    }
+                } else {
+                    mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+                    .then(function(result) {
+                        let rawText = result.value || "";
+                        processTextAdvanced(rawText, file.name, allCadres, function() {
+                            done++;
+                            updateProgress((done / validFiles.length) * 100);
+                            if (done === validFiles.length) finishDeptImport(allCadres, deptId);
+                        });
+                    }).catch(function(err) {
+                        console.error("Read .doc error:", err);
+                        done++;
+                        if (done === validFiles.length) finishDeptImport(allCadres, deptId);
+                    });
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+        input.value = '';
+    }
+
+    function handleDeptJsonImport(input) {
+        if (input.files.length === 0) return;
+        let deptId = importingDeptId;
+        if (!deptId) {
+            alert("Không xác định được Khoa!");
+            input.value = '';
+            return;
+        }
+        
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                let data = JSON.parse(e.target.result);
+                let cadres = Array.isArray(data) ? data : (data.cadres || [data]);
+                if (cadres.length > 0) {
+                    cadres.forEach(c => {
+                        if (!c.department_id) c.department_id = deptId;
+                    });
+                    cadresDatabase = cadresDatabase.concat(cadres);
+                    applySearchFilter();
+                    renderDepartments();
+                    if (currentDeptFilter !== null) renderDeptAppendix(currentDeptFilter);
+                    else renderSystemAppendix();
+                    showToast(`Đã nhập thành công ${cadres.length} hồ sơ vào Khoa.`);
+                } else {
+                    alert("Không tìm thấy dữ liệu hồ sơ trong file JSON.");
+                }
+            } catch (err) { 
+                alert("Lỗi cấu trúc tệp JSON."); 
+                console.error(err);
+            }
+        };
+        reader.readAsText(input.files[0], "UTF-8");
+        input.value = '';
+    }
+
+    function finishDeptImport(allCadres, deptId) {
+        if (allCadres.length > 0) {
+            allCadres.forEach(c => {
+                if (!c.department_id) c.department_id = deptId;
+            });
+            cadresDatabase = cadresDatabase.concat(allCadres);
+            applySearchFilter();
+            renderDepartments();
+            
+            if (currentDeptFilter !== null) {
+                renderDeptAppendix(currentDeptFilter);
+                document.getElementById('rightPanelHeader').innerHTML = `<i class="fas fa-table mr-2"></i>PHỤ LỤC TỔNG HỢP`;
+                let dept = departments.find(d => d.id === currentDeptFilter);
+                if (dept) {
+                    document.getElementById('modeBadge').textContent = dept.name + ' (Tổng hợp)';
+                }
+                viewingCadre = false;
+                document.getElementById('btnDeleteCadre').style.display = 'none';
+                document.getElementById('btnSaveCadre').style.display = 'none';
+            } else {
+                renderSystemAppendix();
+                document.getElementById('rightPanelHeader').innerHTML = `<i class="fas fa-table mr-2"></i>PHỤ LỤC TỔNG HỢP CÁC ĐƠN VỊ`;
+                document.getElementById('modeBadge').textContent = 'Tổng hợp các đơn vị';
+                viewingCadre = false;
+                document.getElementById('btnDeleteCadre').style.display = 'none';
+                document.getElementById('btnSaveCadre').style.display = 'none';
+            }
+            
+            showToast(`Đã nhập thành công ${allCadres.length} hồ sơ vào Khoa.`);
+            if (filteredDatabase.length > 0) setActiveIndex(0);
+        } else {
+            alert("Không tìm thấy dữ liệu hồ sơ trong các file đã chọn.");
+        }
+        updateProgress(100);
+        setTimeout(() => updateProgress(0), 1000);
+    }
+
+    // =========================================================================
+    // CÁC HÀM CÒN LẠI
+    // =========================================================================
+    function showAddDepartmentModal() {
+        $("#newDepartmentName").val("");
+        $("#newDepartmentColor").val("#6c757d");
+        $("#addDepartmentModal").modal("show");
+    }
+
+    function addDepartment() {
+        let name = $("#newDepartmentName").val().trim();
+        let color = $("#newDepartmentColor").val();
+        if (!name) { alert("Vui lòng nhập tên Khoa!"); return; }
+        if (departments.some(d => d.name.toLowerCase() === name.toLowerCase())) {
+            alert("Khoa này đã tồn tại!");
+            return;
+        }
+        departments.push({ id: nextDepartmentId++, name: name, color: color });
+        $("#addDepartmentModal").modal("hide");
+        renderDepartments();
+        saveDepartmentsToLocal();
+        showToast("Đã thêm Khoa: " + name);
+        if (currentDeptFilter === null) {
+            renderSystemAppendix();
+        }
+    }
+
+    function deleteDepartment(id) {
+        let dept = departments.find(d => d.id === id);
+        if (!dept) return;
+        let count = cadresDatabase.filter(c => c.department_id === id).length;
+        let msg = `Bạn có chắc muốn xóa Khoa "${dept.name}"?`;
+        if (count > 0) {
+            let names = cadresDatabase.filter(c => c.department_id === id).map(c => `  • ${c.fullname || "Chưa rõ tên"}`).join("\n");
+            msg += `\n\n⚠️ Có ${count} người thuộc Khoa này:\n${names}\n\nXóa sẽ chuyển họ về "Chưa phân công".`;
+        }
+        if (!confirm(msg)) return;
+        if (count > 0) {
+            cadresDatabase.forEach(c => { if (c.department_id === id) c.department_id = null; });
+        }
+        departments = departments.filter(d => d.id !== id);
+        if (currentDeptFilter === id) {
+            currentDeptFilter = null;
+            renderSystemAppendix();
+            document.getElementById('rightPanelHeader').innerHTML = `<i class="fas fa-table mr-2"></i>PHỤ LỤC TỔNG HỢP CÁC ĐƠN VỊ`;
+            document.getElementById('modeBadge').textContent = 'Tổng hợp CÁC ĐƠN VỊ';
+            document.getElementById('btnDeleteCadre').style.display = 'none';
+            document.getElementById('btnSaveCadre').style.display = 'none';
+            viewingCadre = false;
+        }
+        renderDepartments();
+        renderCadreList();
+        saveDepartmentsToLocal();
+        showToast("Đã xóa Khoa: " + dept.name);
+    }
+
+    function resetDepartments() {
+        if (!confirm("Khôi phục danh sách Khoa mặc định?")) return;
+        departments = [
+            { id: 1, name: "Khoa KHXH&NV", color: "#007bff" },
+            { id: 2, name: "Khoa MBĐC", color: "#28a745" },
+            { id: 3, name: "Khoa NN", color: "#dc3545" },
+            { id: 4, name: "Khoa VTĐT", color: "#fd7e14" },
+            { id: 5, name: "Khoa QSTT", color: "#6f42c1" },
+            { id: 6, name: "Khoa CHTM", color: "#20c997" },
+            { id: 7, name: "Khoa TBHK", color: "#e83e8c" },
+            { id: 8, name: "Khoa VKHK", color: "#17a2b8" },
+            { id: 9, name: "Khoa KTCS", color: "#6c757d" },
+            { id: 10, name: "Khoa CSCB", color: "#ffc107" }
+        ];
+        nextDepartmentId = 11;
+        currentDeptFilter = null;
+        localStorage.removeItem('departments');
+        localStorage.removeItem('nextDepartmentId');
+        renderDepartments();
+        renderCadreList();
+        showToast("Đã khôi phục danh sách Khoa mặc định.");
+        renderSystemAppendix();
+        document.getElementById('rightPanelHeader').innerHTML = `<i class="fas fa-table mr-2"></i>PHỤ LỤC TỔNG HỢP CÁC ĐƠN VỊ`;
+        document.getElementById('modeBadge').textContent = 'Tổng hợp CÁC ĐƠN VỊ';
+        document.getElementById('btnDeleteCadre').style.display = 'none';
+        document.getElementById('btnSaveCadre').style.display = 'none';
+        viewingCadre = false;
+    }
+
+    function saveDepartmentsToLocal() {
+        try {
+            localStorage.setItem('departments', JSON.stringify(departments));
+            localStorage.setItem('nextDepartmentId', nextDepartmentId);
+        } catch(e) {}
+    }
+
+    function loadDepartmentsFromLocal() {
+        try {
+            let saved = localStorage.getItem('departments');
+            if (saved) {
+                departments = JSON.parse(saved);
+                let savedId = localStorage.getItem('nextDepartmentId');
+                if (savedId) nextDepartmentId = parseInt(savedId);
+            }
+        } catch(e) {}
+    }
+
+    // =========================================================================
+    // DEMO DATA
+    // =========================================================================
+    function loadDemoData() {
+        if (cadresDatabase.length > 0) return;
+        cadresDatabase = [{
+            fullname: "NGUYỄN VĂN A", 
+            birthday: "01/02/1972", 
+            gender: "Nam", 
+            ccid: "038072064890",
+            academic_degree: "Tiến sĩ", 
+            academic_degree_year: "2015",
+            academic_title: "",
+            academic_title_year: "",
+            position: "Chủ nhiệm Khoa", 
+            rank: "Đại tá",
+            phone_org: "069 751 244",
+            phone_personal: "0986930458", 
+            email: "vanchung72nt@gmail.com",
+            address: "Lô 46B.35 Đường 5E KĐT Lê Hồng Phong II, Nha Trang",
+            organization: "Trường Sĩ quan Không quân",
+            leader_name: "Thiếu tướng Ngô Vĩnh Phúc",
+            leader_phone: "0989 005 617",
+            org_address: "Cổng số 3, phường Nha Trang, tỉnh Khánh Hòa",
+            department_id: 1,
+            tables: {
+                tableTraining: [
+                    ["Đại học", "HVKTQS+HVKQ", "Kỹ Sư VKHK", "1998"],
+                    ["Thạc sỹ", "HVPK-KQ", "Điều khiển TBB", "2006"],
+                    ["Tiến sỹ", "Viện KH&CN QS", "Kỹ thuật ĐK và TĐH", "2015"]
+                ],
+                tableWork: [
+                    ["3/1991-6/1991", "Chiến sỹ", "C2, d13, f390, QĐ I", "Bỉm Sơn - Thanh Hóa"],
+                    ["7/1991-8/1993", "Tiểu đội trưởng", "Đại đội cảnh vệ, f968, QK IV", "Đông Hà - Quảng Trị"]
+                ],
+                tablePublication: [
+                    ["1", "Development of Automatic Landing Control Algorithm", "Đồng tác giả", "Quốc tế", "2021"],
+                    ["2", "Thiết kế modul giao tiếp giữa máy tính và vi điều khiển", "Đồng tác giả", "Học viện PK-KQ", "2024"]
+                ],
+                tablePatent: [],
+                tableApplication: [
+                    ["1", "Hệ thống huấn luyện thực hành", "Giáo trình, Cấp Trường, Trường Sĩ quan Không quân", "2019-2020"]
+                ],
+                tableTask: [
+                    ["Nghiên cứu, thiết kế, chế tạo hệ thống huấn luyện thực hành", "2023-2025", "KC-KT.37/23", "Đã nghiệm thu", "Chủ trì"]
+                ],
+                tableAward: [],
+                tableAchievement: [
+                    ["1", "Sáng kiến cải tiến thiết bị huấn luyện", "2024"]
+                ]
+            }
+        }, {
+            fullname: "NGUYỄN VĂN B", 
+            birthday: "15/03/1975", 
+            gender: "Nam", 
+            ccid: "038075031579",
+            academic_degree: "Tiến sĩ", 
+            academic_degree_year: "2018",
+            academic_title: "",
+            academic_title_year: "",
+            position: "Phó Chủ nhiệm Khoa", 
+            rank: "Trung tá",
+            phone_org: "069 751 245",
+            phone_personal: "0983690123", 
+            email: "maiducnghia75@gmail.com",
+            address: "Lô 38B.12 Đường 4E KĐT Lê Hồng Phong II, Nha Trang",
+            organization: "Trường Sĩ quan Không quân",
+            leader_name: "Thiếu tướng Ngô Vĩnh Phúc",
+            leader_phone: "0989 005 617",
+            org_address: "Cổng số 3, phường Nha Trang, tỉnh Khánh Hòa",
+            department_id: 1,
+            tables: {
+                tableTraining: [
+                    ["Đại học", "HVKTQS", "Kỹ sư Điện tử", "1998"],
+                    ["Thạc sỹ", "HVKTQS", "Kỹ thuật Điện tử", "2005"],
+                    ["Tiến sỹ", "Viện KH&CN QS", "Kỹ thuật Điện tử", "2018"]
+                ],
+                tableWork: [
+                    ["9/1998-8/2000", "Trợ lý", "Cục Kỹ thuật", "Bộ Quốc phòng"],
+                    ["9/2000-8/2005", "Giảng viên", "Trường Sĩ quan Không quân", "Nha Trang"],
+                    ["9/2005-8/2010", "Phó Chủ nhiệm bộ môn", "Trường Sĩ quan Không quân", "Nha Trang"],
+                    ["9/2010-nay", "Phó Chủ nhiệm Khoa", "Trường Sĩ quan Không quân", "Nha Trang"]
+                ],
+                tablePublication: [
+                    ["1", "Advanced signal processing for radar systems", "Chủ trì", "Tạp chí Quốc tế", "2022"],
+                    ["2", "Nghiên cứu ứng dụng xử lý tín hiệu số trong ra đa", "Đồng tác giả", "Tạp chí KHQS", "2023"],
+                    ["3", "Giải pháp nâng cao độ chính xác của hệ thống radar", "Chủ trì", "Tạp chí Khoa học", "2024"]
+                ],
+                tablePatent: [],
+                tableApplication: [
+                    ["1", "Hệ thống radar cải tiến", "Sáng kiến cấp Bộ", "2022-2023"]
+                ],
+                tableTask: [
+                    ["Nghiên cứu phát triển hệ thống radar thế hệ mới", "2023-2025", "BQP", "Đang thực hiện", "Chủ trì"],
+                    ["Nâng cao chất lượng đào tạo chuyên ngành điện tử", "2022-2024", "NCKH cấp trường", "Đã nghiệm thu", "Chủ trì"]
+                ],
+                tableAward: [
+                    ["1", "Giải thưởng Nhà nước về KH&CN", "2023"]
+                ],
+                tableAchievement: [
+                    ["1", "Phương pháp giảng dạy mới môn Điện tử", "2024"]
+                ]
+            }
+        }];
+    }
+
+    // =========================================================================
+    // SEARCH
+    // =========================================================================
+    function applySearchFilter() {
+        let field = $("#filterField").val();
+        let keyword = $("#filterKeyword").val().trim().toLowerCase();
+
+        let deptFiltered = cadresDatabase;
+        if (currentDeptFilter !== null) {
+            deptFiltered = cadresDatabase.filter(c => c.department_id === currentDeptFilter);
+        }
+
+        if (!keyword) {
+            filteredDatabase = [...deptFiltered];
+        } else {
+            filteredDatabase = deptFiltered.filter(c => {
+                if (field === "all") {
+                    for (let k in c) {
+                        if (k !== "tables" && k !== "appendixData" && String(c[k]).toLowerCase().includes(keyword)) return true;
+                    }
+                    let dept = departments.find(d => d.id === c.department_id);
+                    if (dept && dept.name.toLowerCase().includes(keyword)) return true;
+                    for (let tId in c.tables) {
+                        if (c.tables.hasOwnProperty(tId)) {
+                            for (let row of c.tables[tId]) {
+                                for (let cell of row) {
+                                    if (String(cell).toLowerCase().includes(keyword)) return true;
+                                }
+                            }
+                        }
+                    }
+                    return false;
+                } else if (field === "training" || field === "work" || field === "publication" ||
+                           field === "patent" || field === "application" || field === "task" ||
+                           field === "award" || field === "achievement") {
+                    let tableMap = {
+                        "training": "tableTraining",
+                        "work": "tableWork",
+                        "publication": "tablePublication",
+                        "patent": "tablePatent",
+                        "application": "tableApplication",
+                        "task": "tableTask",
+                        "award": "tableAward",
+                        "achievement": "tableAchievement"
+                    };
+                    let tableId = tableMap[field];
+                    if (c.tables[tableId]) {
+                        for (let row of c.tables[tableId]) {
+                            for (let cell of row) {
+                                if (String(cell).toLowerCase().includes(keyword)) return true;
+                            }
+                        }
+                    }
+                    return false;
+                } else {
+                    return String(c[field] || "").toLowerCase().includes(keyword);
+                }
+            });
+        }
+
+        if (filteredDatabase.length > 0) {
+            currentIndex = 0;
+        } else {
+            currentIndex = -1;
+        }
+        renderCadreList();
+        renderDepartments();
+    }
+
+    // =========================================================================
+    // RENDER CADRE LIST
+    // =========================================================================
+    function renderCadreList() {
+        let html = "";
+        filteredDatabase.forEach((cadre, idx) => {
+            let activeStyle = (idx === currentIndex) ? "active" : "";
+            let dept = departments.find(d => d.id === cadre.department_id);
+            let deptName = dept ? dept.name : "Chưa phân công";
+            let color = dept ? dept.color : "#6c757d";
+            
+            html += `
+                <button type="button" class="list-group-item list-group-item-action cadre-item ${activeStyle}" data-idx="${idx}" onclick="selectCadre(${idx})">
+                    <div class="d-flex w-100 justify-content-between align-items-center">
+                        <span class="cadre-name" title="${cadre.fullname || 'Chưa rõ tên'}">${cadre.fullname || 'Chưa rõ tên'}</span>
+                        <span class="badge-rank">${cadre.rank || ''}</span>
+                    </div>
+                    <div style="margin-top:2px;">
+                        <span class="dept-tag" style="background:${color};font-size:0.7rem;padding:2px 10px;">${deptName}</span>
+                        <span class="badge badge-light" style="font-size:0.7rem;">${cadre.academic_degree || ''}</span>
+                    </div>
+                    <div class="cadre-info">${cadre.ccid || ''}</div>
+                </button>`;
+        });
+        if (filteredDatabase.length === 0) {
+            let msg = currentDeptFilter !== null ? 
+                `Không có giảng viên nào trong Khoa này` : 
+                'Không tìm thấy dữ liệu';
+            html = `<div class="p-4 text-center text-muted small"><i class="fas fa-search fa-2x d-block mb-2"></i>${msg}</div>`;
+        }
+        $("#cadreListContainer").html(html);
+        $("#cadreCount").text(filteredDatabase.length);
+    }
+
+    window.selectCadre = function(idx) {
+        if (currentIndex >= 0 && currentIndex < filteredDatabase.length) {
+            saveFormData(true);
+        }
+        setActiveIndex(idx);
+    };
+
+    // =========================================================================
+    // ADD NEW CADRE
+    // =========================================================================
+    function addNewCadre() {
+        let deptId = selectedDepartmentId || null;
+        if (!deptId && departments.length > 0) {
+            let deptNames = departments.map(d => `${d.id}: ${d.name}`).join('\n');
+            let choice = prompt(`Chọn Khoa cho giảng viên mới (nhập số ID):\n${deptNames}\n\nĐể trống nếu chưa phân công:`);
+            if (choice !== null && choice.trim() !== '') {
+                let id = parseInt(choice.trim());
+                if (departments.some(d => d.id === id)) {
+                    deptId = id;
+                } else {
+                    alert('ID Khoa không hợp lệ!');
+                    return;
+                }
+            }
+        }
+        
+        let newCadre = {
+            fullname: "Giảng viên mới", 
+            birthday: "", 
+            gender: "", 
+            ccid: "",
+            academic_degree: "", 
+            academic_degree_year: "",
+            academic_title: "",
+            academic_title_year: "",
+            position: "", 
+            rank: "",
+            phone_org: "",
+            phone_personal: "", 
+            email: "",
+            address: "",
+            organization: "",
+            leader_name: "",
+            leader_phone: "",
+            org_address: "",
+            department_id: deptId,
+            tables: {
+                tableTraining: [],
+                tableWork: [],
+                tablePublication: [],
+                tablePatent: [],
+                tableApplication: [],
+                tableTask: [],
+                tableAward: [],
+                tableAchievement: []
+            }
+        };
+        
+        cadresDatabase.push(newCadre);
+        applySearchFilter();
+        let newIdx = filteredDatabase.indexOf(newCadre);
+        if (newIdx >= 0) {
+            setActiveIndex(newIdx);
+        }
+        selectedDepartmentId = null;
+        renderDepartments();
+        
+        if (currentDeptFilter !== null) {
+            renderDeptAppendix(currentDeptFilter);
+            document.getElementById('rightPanelHeader').innerHTML = `<i class="fas fa-table mr-2"></i>PHỤ LỤC TỔNG HỢP`;
+            let dept = departments.find(d => d.id === currentDeptFilter);
+            if (dept) {
+                document.getElementById('modeBadge').textContent = dept.name + ' (Tổng hợp)';
+            }
+            viewingCadre = false;
+            document.getElementById('btnDeleteCadre').style.display = 'none';
+            document.getElementById('btnSaveCadre').style.display = 'none';
+        } else {
+            renderSystemAppendix();
+            document.getElementById('rightPanelHeader').innerHTML = `<i class="fas fa-table mr-2"></i>PHỤ LỤC TỔNG HỢP CÁC ĐƠN VỊ`;
+            document.getElementById('modeBadge').textContent = 'Tổng hợp CÁC ĐƠN VỊ';
+            viewingCadre = false;
+            document.getElementById('btnDeleteCadre').style.display = 'none';
+            document.getElementById('btnSaveCadre').style.display = 'none';
+        }
+        
+        showToast("Đã thêm giảng viên mới. Vui lòng điền thông tin và lưu lại.");
+    }
+
+    // =========================================================================
+    // FORM LOAD/SAVE
+    // =========================================================================
+    function renderSingleRowToTable(tableId, rowData) {
+        let tbody = $(`#${tableId} tbody`);
+        let rowHtml = "<tr>";
+        rowData.forEach(val => {
+            rowHtml += `<td><input type="text" class="form-control form-control-sm" value="${val || ''}"></td>`;
+        });
+        rowHtml += `<td class="text-center"><button type="button" class="btn btn-sm text-danger p-0" onclick="$(this).closest('tr').remove()"><i class="fas fa-minus-circle"></i></button></td></tr>`;
+        tbody.append(rowHtml);
+    }
+
+    function addRowToTable(tableId, columns) {
+        if (currentIndex < 0) { alert("Vui lòng chọn người trước khi thêm dòng!"); return; }
+        renderSingleRowToTable(tableId, Array(columns).fill(""));
+        let table = document.getElementById(tableId);
+        if (table) {
+            let scrollContainer = table.closest('.table-responsive-custom');
+            if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        }
+    }
+
+    function saveFormData(isSilent = false) {
+        if (filteredDatabase.length === 0 || currentIndex < 0) return;
+        let cadre = filteredDatabase[currentIndex];
+
+        $("#rightPanelContent #cadreDetailForm input[type='text']").each(function() {
+            let id = $(this).attr("id");
+            if (id) cadre[id] = $(this).val();
+        });
+
+        listTableIds.forEach(tId => {
+            let updatedRows = [];
+            $(`#rightPanelContent #${tId} tbody tr`).each(function() {
+                let rCells = [];
+                $(this).find("input[type='text']").each(function() { rCells.push($(this).val()); });
+                if (rCells.some(v => v.trim() !== "")) updatedRows.push(rCells);
+            });
+            cadre.tables[tId] = updatedRows;
+        });
+
+        if (!isSilent) {
+            showToast(`Đã lưu dữ liệu của: "${cadre.fullname}"`);
+            renderCadreList();
+            renderDepartments();
+            if (currentDeptFilter !== null) renderDeptAppendix(currentDeptFilter);
+            else renderSystemAppendix();
+            if (viewingCadre) renderCadreAppendixEditable(currentIndex);
+        }
+    }
+
+    function deleteCadre() {
+        if (filteredDatabase.length === 0 || currentIndex < 0) {
+            alert("Không có dữ liệu để xóa.");
+            return;
+        }
+        let cadre = filteredDatabase[currentIndex];
+        if (confirm(`Xóa vĩnh viễn hồ sơ của "${cadre.fullname}"?`)) {
+            let rawIdx = cadresDatabase.indexOf(cadre);
+            if (rawIdx > -1) cadresDatabase.splice(rawIdx, 1);
+            applySearchFilter();
+            renderDepartments();
+            
+            if (currentDeptFilter !== null) {
+                renderDeptAppendix(currentDeptFilter);
+                document.getElementById('rightPanelHeader').innerHTML = `<i class="fas fa-table mr-2"></i>PHỤ LỤC TỔNG HỢP`;
+                let dept = departments.find(d => d.id === currentDeptFilter);
+                if (dept) {
+                    document.getElementById('modeBadge').textContent = dept.name + ' (Tổng hợp)';
+                }
+                viewingCadre = false;
+                document.getElementById('btnDeleteCadre').style.display = 'none';
+                document.getElementById('btnSaveCadre').style.display = 'none';
+            } else {
+                renderSystemAppendix();
+                document.getElementById('rightPanelHeader').innerHTML = `<i class="fas fa-table mr-2"></i>PHỤ LỤC TỔNG HỢP CÁC ĐƠN VỊ`;
+                document.getElementById('modeBadge').textContent = 'Tổng hợp CÁC ĐƠN VỊ';
+                viewingCadre = false;
+                document.getElementById('btnDeleteCadre').style.display = 'none';
+                document.getElementById('btnSaveCadre').style.display = 'none';
+            }
+            
+            showToast(`Đã xóa hồ sơ của "${cadre.fullname}"`);
+        }
+    }
+
+    // =========================================================================
+    // EXPORT/IMPORT JSON
+    // =========================================================================
+    function exportToJSONTotal() {
+        saveFormData(true);
+        if (cadresDatabase.length === 0) { alert("Không có dữ liệu!"); return; }
+        let data = {
+            departments: departments,
+            nextDepartmentId: nextDepartmentId,
+            cadres: cadresDatabase
+        };
+        let blob = new Blob([JSON.stringify(data, null, 4)], { type: "application/json;charset=utf-8;" });
+        let dlAnchor = document.createElement('a');
+        dlAnchor.setAttribute("href", URL.createObjectURL(blob));
+        dlAnchor.setAttribute("download", "ho_so_khoa_hoc.json");
+        document.body.appendChild(dlAnchor);
+        dlAnchor.click();
+        dlAnchor.remove();
+    }
+
+    function handleJSONImport(input) {
+        if (input.files.length === 0) return;
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                let data = JSON.parse(e.target.result);
+                if (data.departments) {
+                    departments = data.departments;
+                    nextDepartmentId = data.nextDepartmentId || 11;
+                }
+                if (data.cadres) {
+                    cadresDatabase = data.cadres;
+                } else {
+                    cadresDatabase = Array.isArray(data) ? data : [data];
+                }
+                renderDepartments();
+                applySearchFilter();
+                showToast(`Khôi phục thành công ${cadresDatabase.length} hồ sơ.`);
+                if (currentDeptFilter !== null) renderDeptAppendix(currentDeptFilter);
+                else renderSystemAppendix();
+            } catch (err) { 
+                alert("Lỗi cấu trúc tệp JSON."); 
+                console.error(err);
+            }
+        };
+        reader.readAsText(input.files[0], "UTF-8");
+        input.value = "";
+    }
+
+    // =========================================================================
+    // WORD IMPORT
+    // =========================================================================
+    function handleWordImport(input) {
+        let files = input.files;
+        if (files.length === 0) return;
+        
+        let validFiles = Array.from(files).filter(f => {
+            let ext = f.name.split('.').pop().toLowerCase();
+            return ext === 'docx' || ext === 'doc';
+        });
+        
+        if (validFiles.length === 0) {
+            alert("Vui lòng chọn file .doc hoặc .docx!");
+            return;
+        }
+        
+        updateProgress(0);
+        let done = 0;
+        let allCadres = [];
+
+        validFiles.forEach((file) => {
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                let arrayBuffer = e.target.result;
+                let ext = file.name.split('.').pop().toLowerCase();
+                
+                if (ext === 'docx') {
+                    try {
+                        let zip = new JSZip(arrayBuffer);
+                        let docFile = zip.file("word/document.xml");
+                        if (docFile) {
+                            let xml = docFile.asText();
+                            let tables = parseDocxTables(xml);
+                            
+                            mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+                            .then(function(result) {
+                                let rawText = result.value || "";
+                                processDocxWithTablesAdvanced(rawText, file.name, tables, allCadres, function() {
+                                    done++;
+                                    updateProgress((done / validFiles.length) * 100);
+                                    if (done === validFiles.length) finishImport(allCadres);
+                                });
+                            }).catch(function(err) {
+                                console.error("Mammoth error:", err);
+                                let text = readDocxTextFromZip(arrayBuffer);
+                                processTextAdvanced(text, file.name, allCadres, function() {
+                                    done++;
+                                    updateProgress((done / validFiles.length) * 100);
+                                    if (done === validFiles.length) finishImport(allCadres);
+                                });
+                            });
+                        } else {
+                            done++;
+                            if (done === validFiles.length) finishImport(allCadres);
+                        }
+                    } catch(e) {
+                        console.error("Parse docx error:", e);
+                        mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+                        .then(function(result) {
+                            let rawText = result.value || "";
+                            processTextAdvanced(rawText, file.name, allCadres, function() {
+                                done++;
+                                updateProgress((done / validFiles.length) * 100);
+                                if (done === validFiles.length) finishImport(allCadres);
+                            });
+                        }).catch(function(err) {
+                            done++;
+                            if (done === validFiles.length) finishImport(allCadres);
+                        });
+                    }
+                } else {
+                    mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+                    .then(function(result) {
+                        let rawText = result.value || "";
+                        processTextAdvanced(rawText, file.name, allCadres, function() {
+                            done++;
+                            updateProgress((done / validFiles.length) * 100);
+                            if (done === validFiles.length) finishImport(allCadres);
+                        });
+                    }).catch(function(err) {
+                        console.error("Read .doc error:", err);
+                        done++;
+                        if (done === validFiles.length) finishImport(allCadres);
+                    });
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+        input.value = "";
+    }
+
+    // =========================================================================
+    // PROCESS DOCX WITH TABLES - Advanced
+    // =========================================================================
+    function processDocxWithTablesAdvanced(rawText, fileName, tableData, allCadres, callback) {
+        if (!rawText && tableData.length === 0) {
+            callback();
+            return;
+        }
+        
+        // 1. Trích xuất tên Khoa/Bộ môn
+        let deptName = extractDepartmentName(rawText);
+        let deptId = null;
+        if (deptName) {
+            let found = departments.find(d => d.name.toLowerCase().includes(deptName.toLowerCase()) || deptName.toLowerCase().includes(d.name.toLowerCase()));
+            if (found) {
+                deptId = found.id;
+            } else {
+                let newDept = {
+                    id: nextDepartmentId++,
+                    name: deptName,
+                    color: "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')
+                };
+                departments.push(newDept);
+                deptId = newDept.id;
+                renderDepartments();
+                saveDepartmentsToLocal();
+                showToast(`Đã thêm Khoa mới: ${deptName}`);
+            }
+        }
+        
+        // 2. Tách văn bản thành các Section của từng cán bộ
+        let sections = splitIntoCadreSectionsAdvanced(rawText);
+        
+        // 3. Trích xuất dữ liệu Phụ lục Khoa (Bảng tổng hợp cuối file)
+        let appendixData = extractAppendixFromTables(tableData);
+        let appendixMap = {};
+        if (appendixData) {
+            appendixData.forEach((row, idx) => {
+                if (row && row.length > 1) {
+                    let stt = parseInt(row[0]) || (idx + 1);
+                    appendixMap[stt] = row;
+                }
+            });
+        }
+        
+        // KỸ THUẬT CỐT LÕI: Biến con trỏ toàn cục để theo dõi vị trí bảng trong file Word
+        let tableGlobalIdx = 0; 
+        
+        sections.forEach((section, idx) => {
+            // Parse thông tin cá nhân (Mục 1 đến Mục 8)
+            let parsed = parseSingleCadreAdvanced(section, fileName + "_" + (idx+1));
+            
+            if (deptId) {
+                parsed.department_id = deptId;
+            }
+            
+            // Ánh xạ dữ liệu phụ lục nếu khớp số thứ tự cán bộ
+            let stt = idx + 1;
+            if (appendixMap[stt]) {
+                mapAppendixDataToCadre(parsed, appendixMap[stt]);
+            }
+            
+            // 4. Tìm các mục từ 9 đến 16 xuất hiện trong văn bản của cán bộ này
+            let orderList = [];
+            let orderPattern = /([0-9]+)\.\s*(Quá trình đào tạo|Quá trình công tác|Các công trình công bố|Số lượng văn bằng|Số công trình được áp dụng|Các nhiệm vụ KH&CN|Giải thưởng|Thành tựu)/gi;
+            let m;
+            while ((m = orderPattern.exec(section)) !== null) {
+                let num = parseInt(m[1]);
+                if (num >= 9 && num <= 16) {
+                    orderList.push(num);
+                }
+            }
+            
+            // 5. Phân bổ tuần tự các bảng vào đúng danh mục của cán bộ
+            if (orderList.length > 0) {
+                orderList.forEach((num) => {
+                    let tableId = sectionTableMap[num]; // Lấy string key tương ứng (ví dụ: 'dao_tao', 'cong_tac')
+                    
+                    // Kiểm tra xem bảng tại vị trí con trỏ toàn cục có tồn tại hay không
+                    if (tableId && tableData[tableGlobalIdx]) {
+                        // Tạo một bản sao nông (shallow copy) của bảng để tránh làm hỏng mảng tableData gốc
+                        let data = [...tableData[tableGlobalIdx]]; 
+                        
+                        if (data && data.length > 0) {
+                            let firstRow = data[0];
+                            // Nhận diện hàng tiêu đề (Header)
+                            let isHeader = firstRow.some(c => /^STT|^TT|^T[0-9]|^Bậc|^Thời gian|^Tên|^Hình|^Nội dung|^Vị trí|^Cấp|^Họ và tên|^Ngày|^Số|^Tác giả|^Nơi công bố|^Chức|^Bậc đào|^Vị trí/i.test(c));
+                            if (isHeader && data.length > 1) {
+                                data = data.slice(1); // Loại bỏ dòng tiêu đề, chỉ giữ lại data rows
+                            }
+                        }
+                        
+                        // Gán bảng đã sạch tiêu đề vào đúng object cán bộ
+                        parsed.tables[tableId] = data;
+                    }
+                    
+                    // ĐÃ XỬ LÝ XONG BẢNG NÀY -> Tăng con trỏ lên 1 để cán bộ/mục tiếp theo lấy bảng kế tiếp
+                    tableGlobalIdx++; 
+                });
+            }
+            
+            // Khử trùng lặp hoặc gán tên file làm tên mặc định nếu lỗi OCR không quét được mục 1. Họ và tên
+            if (!parsed.fullname || parsed.fullname.trim() === "") {
+                parsed.fullname = fileName.replace(/\.(docx|doc)$/i, "").replace(/_\d+$/, "");
+            }
+            
+            allCadres.push(parsed);
+        });
+        
+        callback();
+    }
+
+    function extractDepartmentName(text) {
+        // Tìm dòng KHOA: tên khoa
+        let match = text.match(/KHOA\s*[:]\s*([^\n]+)/i);
+        if (match) {
+            let deptName = match[1].trim();
+            // Loại bỏ dấu xuống dòng và khoảng trắng thừa
+            deptName = deptName.replace(/[\r\n]+/g, '').trim();
+            return deptName;
+        }
+        return null;
+    }
+
+    function extractAppendixFromTables(tableData) {
+        for (let table of tableData) {
+            if (table && table.length > 0) {
+                let firstRow = table[0];
+                // Kiểm tra header của bảng phụ lục
+                if (firstRow && firstRow.some(c => /PHỤ LỤC/i.test(c))) {
+                    let result = [];
+                    // Bỏ qua 2 dòng header (dòng tiêu đề và dòng GVC/GVG CB)
+                    // Bắt đầu từ dòng thứ 3 là dữ liệu
+                    for (let i = 2; i < table.length; i++) {
+                        let row = table[i];
+                        if (row && row.length >= 3) {
+                            result.push(row);
+                        }
+                    }
+                    return result;
+                }
+            }
+        }
+        return null;
+    }
+
+    function mapAppendixDataToCadre(parsed, appendixRow) {
+        if (!appendixRow || appendixRow.length < 3) return;
+
+        let parseNum = (val) => {
+            if (!val) return 0;
+            let clean = val.toString().replace(/…|\./g, "").trim();
+            let num = parseInt(clean);
+            return isNaN(num) ? 0 : num;
+        };
+
+        let parseChucDanh = (val) => {
+            if (!val) return 0;
+            let clean = val.toString().replace(/…|\./g, "").trim().toLowerCase();
+            if (clean === "" || clean === "0") return 0;
+            return 1; 
+        };
+
+        // Mapping theo đúng vị trí cột trong bảng phụ lục file Word
+        parsed.appendixData = {
+            // Chức danh (cột 2, 3)
+            chuc_danh_gvc: parseChucDanh(appendixRow[2]),
+            chuc_danh_gvg_cb: parseChucDanh(appendixRow[3]),
+            
+            // Đề tài NN (cột 4, 5)
+            de_tai_nn_cn: parseNum(appendixRow[4]),
+            de_tai_nn_tg: parseNum(appendixRow[5]),
+            // Đề tài BQP (cột 6, 7)
+            de_tai_bqp_cn: parseNum(appendixRow[6]),
+            de_tai_bqp_tg: parseNum(appendixRow[7]),
+            // Đề tài BTTM (cột 8, 9)
+            de_tai_bttm_cn: parseNum(appendixRow[8]),
+            de_tai_bttm_tg: parseNum(appendixRow[9]),
+            // Đề tài Trg (cột 10, 11)
+            de_tai_trg_cn: parseNum(appendixRow[10]),
+            de_tai_trg_tg: parseNum(appendixRow[11]),
+            
+            // Sáng kiến BTTM (cột 12, 13)
+            sang_kien_bttm_cn: parseNum(appendixRow[12]),
+            sang_kien_bttm_tg: parseNum(appendixRow[13]),
+            // Sáng kiến Trg (cột 14, 15)
+            sang_kien_trg_cn: parseNum(appendixRow[14]),
+            sang_kien_trg_tg: parseNum(appendixRow[15]),
+            
+            // Giáo trình BTTM (cột 16, 17)
+            giao_trinh_bttm_cn: parseNum(appendixRow[16]),
+            giao_trinh_bttm_tg: parseNum(appendixRow[17]),
+            // Giáo trình Trg (cột 18, 19)
+            giao_trinh_trg_cn: parseNum(appendixRow[18]),
+            giao_trinh_trg_tg: parseNum(appendixRow[19]),
+            
+            // Tài liệu BTTM (cột 20, 21)
+            tai_lieu_bttm_cn: parseNum(appendixRow[20]),
+            tai_lieu_bttm_tg: parseNum(appendixRow[21]),
+            // Tài liệu Trg (cột 22, 23)
+            tai_lieu_trg_cn: parseNum(appendixRow[22]),
+            tai_lieu_trg_tg: parseNum(appendixRow[23]),
+            
+            // Bài báo (cột 24, 25)
+            bai_bao_tgc: parseNum(appendixRow[24]),
+            bai_bao_tg: parseNum(appendixRow[25]),
+            
+            // Ghi chú (cột 26)
+            ghi_chu: appendixRow[26] || ''
+        };
+    }
+
+    function splitIntoCadreSectionsAdvanced(text) {
+        let sections = [];
+        // Tìm tất cả các mục "1. Họ và tên:"
+        let pattern = /1\.\s*Họ và tên\s*[:.]\s*([^,\n;]+)/gi;
+        let match;
+        let matches = [];
+        
+        while ((match = pattern.exec(text)) !== null) {
+            matches.push({
+                start: match.index,
+                end: pattern.lastIndex,
+                name: match[1].trim()
+            });
+        }
+        
+        if (matches.length === 0) {
+            // Fallback: tìm các mục số
+            let pattern2 = /(\d+\.\s*[A-ZÀ-Ỹ][^:\n]*?:)/gi;
+            let match2;
+            let lastIdx = 0;
+            let sections2 = [];
+            while ((match2 = pattern2.exec(text)) !== null) {
+                if (match2[1].startsWith('1.')) {
+                    if (lastIdx > 0) {
+                        sections2.push(text.substring(lastIdx, match2.index).trim());
+                    }
+                    lastIdx = match2.index;
+                }
+            }
+            if (lastIdx > 0) {
+                sections2.push(text.substring(lastIdx).trim());
+            }
+            if (sections2.length > 0) {
+                return sections2;
+            }
+            return [text];
+        }
+        
+        for (let i = 0; i < matches.length; i++) {
+            let start = matches[i].start;
+            // Kết thúc section khi gặp section tiếp theo hoặc hết file
+            let end = (i < matches.length - 1) ? matches[i + 1].start : text.length;
+            let section = text.substring(start, end).trim();
+            if (section.length > 50) {
+                sections.push(section);
+            }
+        }
+        
+        return sections;
+    }
+
+    function parseSingleCadreAdvanced(text, filename) {
+        let parsed = {
+            fullname: "",
+            birthday: "", gender: "",
+            ccid: "",
+            academic_title: "", academic_title_year: "",
+            academic_degree: "", academic_degree_year: "",
+            research_title: "", // Trường lưu Chức danh nghiên cứu sạch
+            position: "",       // Trường lưu Chức vụ sạch
+            phone_org: "", phone_personal: "",
+            address: "", email: "",
+            organization: "", leader_name: "", leader_phone: "", org_address: "",
+            rank: "", department_id: null,
+            tables: {
+                tableTraining: [],
+                tableWork: [],
+                tablePublication: [],
+                tablePatent: [],
+                tableApplication: [],
+                tableTask: [],
+                tableAward: [],
+                tableAchievement: []
+            }
+        };
+
+        // --- MỤC 1: HỌ VÀ TÊN (Cho phép dấu phẩy nếu có tên đệm đặc biệt) ---
+        parsed.fullname = extractAdvanced(text, /1\.\s*Họ và tên\s*[:.]\s*([^\n;]+)/i) ||
+                           extractAdvanced(text, /Họ và tên\s*[:.]\s*([^\n;]+)/i) ||
+                           filename.replace(/\.(docx|doc)$/i, "").replace(/_\d+$/, "");
+        if (parsed.fullname) parsed.fullname = parsed.fullname.trim();
+
+        // --- MỤC 2: NGÀY SINH & GIỚI TÍNH ---
+        parsed.birthday = extractAdvanced(text, /2\.\s*Ngày\/tháng\/năm sinh\s*[:.]\s*([^\n;]+?)(?=\s*Nam\/Nữ|$)/i) ||
+                          extractAdvanced(text, /Ngày\/tháng\/năm sinh\s*[:.]\s*([^\n;]+)/i);
+        if (parsed.birthday) parsed.birthday = parsed.birthday.trim();
+        
+        let genderMatch = text.match(/2\.\s*Ngày\/tháng\/năm sinh[^]*?,\s*Nam\/Nữ\s*[:.]\s*([^\n;]+)/i);
+        parsed.gender = genderMatch ? genderMatch[1].trim() : (extractAdvanced(text, /Nam\/Nữ\s*[:.]\s*([^\n;]+)/i) || "");
+
+        // --- MỤC 3: CCCD ---
+        parsed.ccid = extractAdvanced(text, /3\.\s*Số định danh cá nhân\/CCCD\s*[:.]\s*([^\n;]+)/i) ||
+                      extractAdvanced(text, /CCCD\s*[:.]\s*([^\n;]+)/i) ||
+                      extractAdvanced(text, /Số định danh\s*[:.]\s*([^\n;]+)/i);
+        if (parsed.ccid) parsed.ccid = parsed.ccid.trim();
+
+        // --- MỤC 4: HỌC HÀM, HỌC VỊ ---
+        let section4 = findSectionAdvanced(text, /4\.\s*Học hàm[^]*?(?=5\.\s*Chức danh|$)/i);
+        if (section4) {
+            parsed.academic_title = extractAdvanced(section4, /Học hàm\s*[:.]\s*([^\n;]+?)(?=\s*Năm được phong|$)/i);
+            parsed.academic_title_year = extractAdvanced(section4, /Năm được phong học hàm\s*[:.]\s*([^\n;]+)/i);
+            parsed.academic_degree = extractAdvanced(section4, /Học vị\s*[:.]\s*([^\n;]+?)(?=\s*Năm đạt|$)/i);
+            parsed.academic_degree_year = extractAdvanced(section4, /Năm đạt học vị\s*[:.]\s*([^\n;]+)/i);
+        }
+        if (!parsed.academic_title) parsed.academic_title = extractAdvanced(text, /Học hàm\s*[:.]\s*([^\n;]+?)(?=\s*Năm|$)/i);
+        if (!parsed.academic_degree) parsed.academic_degree = extractAdvanced(text, /Học vị\s*[:.]\s*([^\n;]+?)(?=\s*Năm|$)/i);
+
+        // --- MỤC 5: CHỨC DANH NGHIÊN CỨU & CHỨC VỤ (Sửa lỗi mất thông tin sau dấu phẩy) ---
+        let resTitleMatch = text.match(/Chức danh nghiên cứu\s*[:.]\s*([^]*?)(?=\s*Chức vụ|$)/i);
+        if (resTitleMatch) {
+            parsed.research_title = resTitleMatch[1].replace(/[.…\s]+/g, ' ').trim();
+            // Nếu chỉ chứa toàn dấu chấm hoặc trống thì xóa sạch
+            if (/^[^A-Za-z0-9À-ỹ]*$/.test(parsed.research_title)) parsed.research_title = "";
+        }
+
+        // 2. Lấy toàn bộ đoạn text từ sau chữ "Chức vụ:" đến trước tiêu đề "6. Điện thoại"
+        let positionMatch = text.match(/Chức vụ\s*[:.]\s*([^]*?)(?=\s*6\.\s*Điện thoại|$)/i);
+        if (positionMatch) {
+            // Loại bỏ hoàn toàn dấu chấm lửng mẫu, giữ nguyên dấu phẩy và khoảng trắng đơn
+            parsed.position = positionMatch[1].replace(/[.…]+/g, '').replace(/[\r\n]+/g, ' ').trim();
+        }
+
+        // Fallback chéo nếu một trong hai mục bị thiếu
+        if (!parsed.position && parsed.research_title) {
+            parsed.position = parsed.research_title;
+        }
+
+        // --- MỤC 6: ĐIỆN THOẠI (Sửa lỗi mất số điện thoại tổ chức) ---
+        let section6 = findSectionAdvanced(text, /6\.\s*Điện thoại[^]*?(?=7\.\s*Địa chỉ|$)/i);
+        if (section6) {
+            // 1. Tìm số cá nhân trước
+            let personalMatch = section6.match(/Cá nhân\s*[:.]\s*([\d\s.-]{7,15})/i);
+            if (personalMatch) parsed.phone_personal = personalMatch[1].trim();
+
+            // 2. Lấy dữ liệu nằm GIỮA nhãn "Tổ chức:" và "Cá nhân:" nhằm quét sạch dấu chấm lửng định dạng mẫu (.....)
+            let orgBlockMatch = section6.match(/Tổ chức\s*[:.]\s*([^]*?)(?=\s*Cá nhân|$)/i);
+            if (orgBlockMatch) {
+                let cleanOrg = orgBlockMatch[1].replace(/\./g, '').replace(/[^\d-]/g, '').trim();
+                if (cleanOrg.length >= 7) {
+                    parsed.phone_org = cleanOrg;
+                }
+            }
+        }
+        // Fallbacks toàn cục cho mục 6
+        if (!parsed.phone_personal) parsed.phone_personal = extractAdvanced(text, /Cá nhân\s*[:.]\s*([\d\s.-]{7,15})/i) || "";
+        if (!parsed.phone_org) {
+            let globalOrgMatch = text.match(/Tổ chức\s*[:.]\s*([^]*?)(?=\s*Cá nhân|$)/i);
+            if (globalOrgMatch) {
+                let cleanGlobalOrg = globalOrgMatch[1].replace(/\./g, '').replace(/[^\d-]/g, '').trim();
+                if (cleanGlobalOrg.length >= 7) parsed.phone_org = cleanGlobalOrg;
+            }
+        }
+
+        // --- MỤC 7: ĐỊA CHỈ & EMAIL CÁ NHÂN (Cho phép chứa dấu phẩy địa chỉ) ---
+        let section7 = findSectionAdvanced(text, /7\.\s*Địa chỉ[^]*?(?=8\.\s*Tổ chức|$)/i);
+        if (section7) {
+            parsed.address = extractAdvanced(section7, /Địa chỉ\s*[:.]\s*([^]*?)(?=\s*E-mail|$)/i);
+            parsed.email = extractAdvanced(section7, /E-mail\s*[:.]\s*([^\s,;]+)/i);
+        }
+        if (!parsed.address) parsed.address = extractAdvanced(text, /Địa chỉ[:\s]*([^\r\n]+)/i);
+        if (!parsed.email) parsed.email = extractAdvanced(text, /E-mail\s*[:.]\s*([^\s,;]+)/i);
+        if (parsed.address) parsed.address = parsed.address.replace(/\.+$/, '').trim();
+
+        // --- MỤC 8: THÔNG TIN TỔ CHỨC CHỨA ĐỊA CHỈ ĐẦY ĐỦ (Sửa lỗi mất thông tin sau dấu phẩy) ---
+        let block8 = text.match(/8\.\s*Tổ chức[^]*?(?=9\.\s*Quá trình|$)/i);
+        if (block8) {
+            let content8 = block8[0];
+
+            // Trích xuất tên tổ chức
+            let orgMatch = content8.match(/Tên tổ chức\s*[:.]\s*([^]*?)(?=\s*Tên người lãnh đạo|$)/i);
+            if (orgMatch) parsed.organization = orgMatch[1].trim().replace(/^[:.\s]+/, '');
+
+            // Trích xuất tên lãnh đạo
+            let leaderMatch = content8.match(/Tên người lãnh đạo\s*[:.]\s*([^]*?)(?=\s*Điện thoại người lãnh đạo|$)/i);
+            if (leaderMatch) parsed.leader_name = leaderMatch[1].trim().replace(/^[:.\s]+/, '');
+
+            // Trích xuất điện thoại lãnh đạo
+            let leadPhoneMatch = content8.match(/Điện thoại người lãnh đạo\s*[:.]\s*([^]*?)(?=\s*Địa chỉ|$)/i);
+            if (leadPhoneMatch) parsed.leader_phone = leadPhoneMatch[1].trim().replace(/^[:.\s]+/, '');
+
+            // TRÍCH XUẤT ĐỊA CHỈ: Lấy toàn bộ đoạn text từ chữ "Địa chỉ:" cho đến hết block8
+            let addrMatch = content8.match(/Địa chỉ\s*[:.]\s*([^]*?)$/i);
+            if (addrMatch) {
+                // Chỉ dọn dẹp dấu chấm lửng/xuống dòng dư thừa ở đầu và cuối chuỗi, GIỮ NGUYÊN toàn bộ dấu phẩy bên trong câu
+                let cleanAddr = addrMatch[1].replace(/^[:.\s]+/, '').replace(/[\r\n]+/g, ' ').replace(/\.+$/, '').trim();
+                parsed.org_address = cleanAddr;
+            }
+        }
+
+        // Fallbacks an toàn trên toàn văn bản nếu block8 bị lỗi không bắt được cấu trúc
+        if (!parsed.organization) parsed.organization = extractAdvanced(text, /Tên tổ chức\s*[:.]\s*([^\r\n]+)/i) || "";
+        if (!parsed.org_address) {
+            let globalAddr = extractAdvanced(text, /Địa chỉ\s*[:.]\s*([^]*?)(?=9\.\s*Quá trình|$)/i);
+            if (globalAddr) parsed.org_address = globalAddr.replace(/[\r\n]+/g, ' ').replace(/\.+$/, '').trim();
+        }
+
+        // --- CÁC MỤC BẢNG BIỂU TỪ 9 ĐẾN 16 ---
+        let trainingSection = findSectionByNumberAdvanced(text, 9, "đào tạo");
+        if (trainingSection) {
+            parsed.tables.tableTraining = parseTableContentAdvanced(trainingSection, 4);
+        }
+        
+        let workSection = findSectionByNumberAdvanced(text, 10, "công tác");
+        if (workSection) {
+            parsed.tables.tableWork = parseTableContentAdvanced(workSection, 4);
+        }
+        
+        let pubSection = findSectionByNumberAdvanced(text, 11, "công bố");
+        if (pubSection) {
+            parsed.tables.tablePublication = parseTableContentAdvanced(pubSection, 5);
+        }
+        
+        let patentSection = findSectionByNumberAdvanced(text, 12, "bảo hộ");
+        if (patentSection) {
+            parsed.tables.tablePatent = parseTableContentAdvanced(patentSection, 3);
+        }
+        
+        let appSection = findSectionByNumberAdvanced(text, 13, "áp dụng");
+        if (appSection) {
+            parsed.tables.tableApplication = parseTableContentAdvanced(appSection, 4);
+        }
+        
+        let taskSection = findSectionByNumberAdvanced(text, 14, "nhiệm vụ");
+        if (taskSection) {
+            parsed.tables.tableTask = parseTableContentAdvanced(taskSection, 5);
+        }
+        
+        let awardSection = findSectionByNumberAdvanced(text, 15, "giải thưởng");
+        if (awardSection) {
+            parsed.tables.tableAward = parseTableContentAdvanced(awardSection, 3);
+        }
+        
+        let achSection = findSectionByNumberAdvanced(text, 16, "thành tựu");
+        if (achSection) {
+            parsed.tables.tableAchievement = parseTableContentAdvanced(achSection, 3);
+        }
+        
+        return parsed;
+    }
+
+    function extractAdvanced(text, pattern) {
+        let m = text.match(pattern);
+        if (m && m[1]) {
+            let value = m[1].trim();
+            if (value.includes(',')) {
+                value = value.split(',')[0].trim();
+            }
+            return value.replace(/[.;:\t]+$/, "").trim();
+        }
+        return "";
+    }
+
+    function findSectionAdvanced(text, pattern) {
+        let match = text.match(pattern);
+        return (match && match[0]) ? match[0] : null;
+    }
+
+    function findSectionByNumberAdvanced(text, number, keyword) {
+        if (!text) return null;
+        
+        // Chuẩn hóa chuỗi tìm kiếm keyword để an toàn cho Regex
+        let safeKeyword = keyword.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        
+        let patterns = [
+            // Trường hợp 1: Chuẩn hóa theo số mục "X. Tiêu đề" -> Quét đến khi gặp mục số tiếp theo "Y." hoặc kết thúc chuỗi
+            new RegExp(number + `\\.\\s*` + safeKeyword + `[^]*?(?=\\s*\\b` + (parseInt(number) + 1) + `\\.\\s*|\\s*\\b[0-9]+\\.\\s*[A-Za-zÀ-ỹ]|\\s*PHỤ LỤC|\\s*$)`, 'i'),
+            
+            // Trường hợp 2: Dạng dòng đơn "X. Tiêu đề: nội dung" (Nuốt từ tiêu đề đến mục số tiếp theo bất kỳ)
+            new RegExp(number + `\\.\\s*` + safeKeyword + `[^]*?(?=\\s*\\b[0-9]+\\.\\s*|\\s*PHỤ LỤC|\\s*$)`, 'i'),
+            
+            // Trường hợp 3: Dấu gạch ngang thay vì dấu chấm "X - Tiêu đề"
+            new RegExp(number + `\\s*[-–]\\s*` + safeKeyword + `[^]*?(?=\\s*\\b[0-9]+\\s*[-–]|\\s*$)`, 'i'),
+            
+            // Trường hợp 4: Khớp không cần số (Fallback chỉ tìm theo Keyword)
+            new RegExp(`(?:` + safeKeyword + `)[^]*?(?=\\s*\\b[0-9]+\\.\\s*|\\s*PHỤ LỤC|\\s*$)`, 'i')
+        ];
+        
+        for (let pattern of patterns) {
+            let match = text.match(pattern);
+            if (match) {
+                let fullMatch = match[0];
+                // Loại bỏ phần tiêu đề "X. Tiêu đề" ra khỏi kết quả trả về để chỉ lấy nội dung phía sau
+                let headerRegex = new RegExp(`^\\s*` + number + `\\.\\s*` + safeKeyword + `\\s*[:.]?\\s*`, 'i');
+                let content = fullMatch.replace(headerRegex, '').trim();
+                
+                // HẠ ĐIỀU KIỆN: Chỉ cần độ dài > 2 ký tự và chứa chữ/số là chấp nhận (Giúp giữ lại số điện thoại hoặc địa chỉ ngắn)
+                if (content.length >= 2 && content.match(/[A-Za-zÀ-ỹ0-9]/)) {
+                    return content;
+                }
+            }
+        }
+        return null;
+    }
+
+    function parseTableContentAdvanced(text, colCount) {
+        let rows = [];
+        let lines = text.split('\n').filter(l => l.trim().length > 0);
+        
+        let tableData = [];
+        let inTable = false;
+        let headerSkipped = false;
+        let headerFound = false;
+        
+        for (let line of lines) {
+            let trimmed = line.trim();
+            
+            if (trimmed.includes('|') || (trimmed.includes('+') && trimmed.includes('-'))) {
+                inTable = true;
+                if (/^[\+\-\|]+$/.test(trimmed.replace(/\s/g, ''))) {
+                    if (!headerFound) {
+                        headerFound = true;
+                        headerSkipped = true;
+                    }
+                    continue;
+                }
+                
+                let cells = trimmed.split('|').map(c => c.trim()).filter(c => c.length > 0);
+                if (cells.length >= 2) {
+                    let isHeader = cells.some(c => /^STT|^TT|^T[0-9]|^Bậc|^Thời gian|^Tên|^Hình|^Nội dung|^Vị trí|^Cấp|^Họ và tên|^Ngày|^Số|^Tác giả|^Nơi công bố|^Chức|^Bậc đào|^Vị trí/i.test(c));
+                    
+                    if (isHeader) {
+                        headerFound = true;
+                        headerSkipped = true;
+                        continue;
+                    }
+                    
+                    if (headerSkipped) {
+                        while (cells.length < colCount) cells.push("");
+                        if (cells.some(c => c.length > 0)) {
+                            tableData.push(cells.slice(0, colCount));
+                        }
+                    }
+                }
+                continue;
+            }
+            if (inTable && trimmed.length === 0) {
+                inTable = false;
+            }
+        }
+        
+        if (tableData.length > 0) {
+            return tableData;
+        }
+        
+        let dataRows = [];
+        let foundHeader = false;
+        let headerRowFound = false;
+        
+        for (let line of lines) {
+            let trimmed = line.trim();
+            
+            if (!foundHeader) {
+                let headerMatch = trimmed.match(/(STT|TT|Thời gian|Tên|Nội dung|Hình thức|Địa chỉ|Bậc|Vị trí|Chức vụ|Cấp bậc|Tổ chức|Tác giả|Nơi công bố|Chức|Bậc đào|Vị trí)/i);
+                if (headerMatch) {
+                    let headers = trimmed.split(/\s{3,}/).map(c => c.trim()).filter(c => c.length > 0);
+                    if (headers.length < 2) headers = trimmed.split('\t').map(c => c.trim()).filter(c => c.length > 0);
+                    foundHeader = true;
+                    headerRowFound = true;
+                    continue;
+                }
+            }
+            
+            if (foundHeader && trimmed.length > 0 && !headerRowFound) {
+                headerRowFound = true;
+                continue;
+            }
+            
+            if (foundHeader && headerRowFound && trimmed.length > 0) {
+                let cells = trimmed.split(/\s{3,}/).map(c => c.trim()).filter(c => c.length > 0);
+                if (cells.length < 2) cells = trimmed.split('\t').map(c => c.trim()).filter(c => c.length > 0);
+                if (cells.length >= 2) {
+                    let isHeader = cells.some(c => /^STT|^TT|^T[0-9]|^Bậc|^Thời gian|^Tên|^Hình|^Nội dung|^Vị trí|^Cấp|^Họ và tên|^Ngày|^Số|^Tác giả|^Nơi công bố|^Chức|^Bậc đào|^Vị trí/i.test(c));
+                    if (!isHeader) {
+                        while (cells.length < colCount) cells.push("");
+                        if (cells.some(c => c.length > 0)) {
+                            dataRows.push(cells.slice(0, colCount));
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (dataRows.length > 0) {
+            return dataRows;
+        }
+        
+        return rows;
+    }
+
+    function processTextAdvanced(rawText, fileName, allCadres, callback) {
+        if (!rawText || rawText.length < 50) {
+            callback();
+            return;
+        }
+        
+        let sections = splitIntoCadreSectionsAdvanced(rawText);
+        if (sections.length === 0) {
+            sections = [rawText];
+        }
+        
+        sections.forEach((section, i) => {
+            let parsed = parseSingleCadreAdvanced(section, fileName + "_" + (i+1));
+            if (parsed && parsed.fullname) {
+                allCadres.push(parsed);
+            }
+        });
+        callback();
+    }
+
+    function finishImport(allCadres) {
+        if (allCadres.length > 0) {
+            cadresDatabase = cadresDatabase.concat(allCadres);
+            applySearchFilter();
+            renderDepartments();
+            showToast(`Đã nhập thành công ${allCadres.length} hồ sơ.`);
+            if (filteredDatabase.length > 0) setActiveIndex(0);
+            if (currentDeptFilter !== null) renderDeptAppendix(currentDeptFilter);
+            else renderSystemAppendix();
+        } else {
+            alert("Không tìm thấy dữ liệu hồ sơ trong các file đã chọn.");
+        }
+        updateProgress(100);
+        setTimeout(() => updateProgress(0), 1000);
+    }
+
+    function readDocxTextFromZip(arrayBuffer) {
+        try {
+            let zip = new JSZip(arrayBuffer);
+            let docFile = zip.file("word/document.xml");
+            if (docFile) {
+                let xml = docFile.asText();
+                return xml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+            }
+            return "";
+        } catch(e) {
+            return "";
+        }
+    }
+
+    function parseDocxTables(xml) {
+        let tables = [];
+        let tblRegex = /<w:tbl[^>]*>([\s\S]*?)<\/w:tbl>/gi;
+        let match;
+        while ((match = tblRegex.exec(xml)) !== null) {
+            let tblContent = match[1];
+            let rows = [];
+            let trRegex = /<w:tr[^>]*>([\s\S]*?)<\/w:tr>/gi;
+            let trMatch;
+            while ((trMatch = trRegex.exec(tblContent)) !== null) {
+                let trContent = trMatch[1];
+                let cells = [];
+                let tcRegex = /<w:tc[^>]*>([\s\S]*?)<\/w:tc>/gi;
+                let tcMatch;
+                while ((tcMatch = tcRegex.exec(trContent)) !== null) {
+                    let tcContent = tcMatch[1];
+                    let text = tcContent.replace(/<w:p[^>]*>([\s\S]*?)<\/w:p>/gi, function(m, p1) {
+                        return p1.replace(/<[^>]*>/g, '').trim();
+                    }).replace(/<[^>]*>/g, '').trim();
+                    if (!text) {
+                        let tRegex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/gi;
+                        let tMatch;
+                        while ((tMatch = tRegex.exec(tcContent)) !== null) {
+                            text += tMatch[1].trim() + ' ';
+                        }
+                        text = text.trim();
+                    }
+                    cells.push(text);
+                }
+                if (cells.length > 0) {
+                    rows.push(cells);
+                }
+            }
+            if (rows.length > 0) {
+                tables.push(rows);
+            }
+        }
+        return tables;
+    }
+
+    // =========================================================================
+    // SIDEBAR TOGGLE - Hỗ trợ cả hover và touch
+    // =========================================================================
+    $(document).ready(function() {
+        var sidebarWrapper = $('#sidebarWrapper');
+        var sidebarTrigger = $('#sidebarTrigger');
+        var sidebarOverlay = $('#sidebarOverlay');
+        var isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        
+        // Xác định thiết bị touch
+        if (isTouchDevice) {
+            sidebarWrapper.addClass('touch-device');
+        }
+        
+        // Click vào trigger để toggle sidebar (cả desktop và mobile)
+        sidebarTrigger.on('click touchstart', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (sidebarWrapper.hasClass('touch-active')) {
+                closeSidebar();
+            } else {
+                openSidebar();
+            }
+        });
+        
+        // Click vào overlay để đóng sidebar
+        sidebarOverlay.on('click touchstart', function(e) {
+            e.preventDefault();
+            closeSidebar();
+        });
+        
+        // Vuốt từ mép trái để mở sidebar (touch)
+        var touchStartX = 0;
+        var touchStartY = 0;
+        var isSwiping = false;
+        
+        $(document).on('touchstart', function(e) {
+            touchStartX = e.originalEvent.touches[0].clientX;
+            touchStartY = e.originalEvent.touches[0].clientY;
+            isSwiping = false;
+        });
+        
+        $(document).on('touchmove', function(e) {
+            if (touchStartX === 0) return;
+            var touchX = e.originalEvent.touches[0].clientX;
+            var touchY = e.originalEvent.touches[0].clientY;
+            var diffX = touchX - touchStartX;
+            var diffY = touchY - touchStartY;
+            
+            // Kiểm tra vuốt ngang từ mép trái
+            if (Math.abs(diffX) > Math.abs(diffY) && touchStartX < 30 && diffX > 30) {
+                isSwiping = true;
+                e.preventDefault();
+                if (!sidebarWrapper.hasClass('touch-active')) {
+                    openSidebar();
+                }
+            }
+        });
+        
+        $(document).on('touchend', function(e) {
+            touchStartX = 0;
+            touchStartY = 0;
+            isSwiping = false;
+        });
+        
+        // Đóng sidebar khi click ra ngoài (desktop)
+        $(document).click(function(e) {
+            if (!$(e.target).closest('.sidebar-wrapper').length && !$(e.target).closest('.sidebar-overlay').length) {
+                if (sidebarWrapper.hasClass('touch-active')) {
+                    closeSidebar();
+                }
+            }
+        });
+        
+        function openSidebar() {
+            sidebarWrapper.addClass('touch-active');
+            sidebarOverlay.addClass('active');
+            $('body').css('overflow', 'hidden');
+        }
+        
+        function closeSidebar() {
+            sidebarWrapper.removeClass('touch-active');
+            sidebarOverlay.removeClass('active');
+            $('body').css('overflow', '');
+        }
+        
+        // Hover behavior cho desktop (giữ nguyên)
+        sidebarWrapper.on('mouseenter', function() {
+            if (!isTouchDevice && !sidebarWrapper.hasClass('touch-active')) {
+                // Hover tự động hiển thị
+            }
+        });
+        
+        sidebarWrapper.on('mouseleave', function() {
+            if (!isTouchDevice && !sidebarWrapper.hasClass('touch-active')) {
+                // Tự động ẩn khi rời chuột
+            }
+        });
+        
+        // Đóng sidebar khi resize sang desktop
+        $(window).on('resize', function() {
+            if ($(window).width() > 768 && sidebarWrapper.hasClass('touch-active')) {
+                closeSidebar();
+            }
+        });
+    });
+
+    // =========================================================================
+    // GLOBAL
+    // =========================================================================
+    window.applySearchFilter = applySearchFilter;
+    window.addRowToTable = addRowToTable;
+    window.saveFormData = saveFormData;
+    window.deleteCadre = deleteCadre;
+    window.addNewCadre = addNewCadre;
+    window.addCadreToDept = addCadreToDept;
+    window.importToDept = importToDept;
+    window.filterByDept = filterByDept;
+    window.clearDeptFilter = clearDeptFilter;
+    window.switchTab = switchTab;
+    window.goBackToDeptView = goBackToDeptView;
+    window.refreshCurrentView = refreshCurrentView;
+    window.saveCurrentData = saveCurrentData;
+    window.saveAppendixData = saveAppendixData;
+    window.exportToJSONTotal = exportToJSONTotal;
+    window.handleJSONImport = handleJSONImport;
+    window.handleWordImport = handleWordImport;
+    window.handleDeptWordImport = handleDeptWordImport;
+    window.handleDeptJsonImport = handleDeptJsonImport;
+    window.showAddDepartmentModal = showAddDepartmentModal;
+    window.addDepartment = addDepartment;
+    window.resetDepartments = resetDepartments;
+    window.showToast = showToast;
+</script>
+</body>
+</html>
